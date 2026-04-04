@@ -1,4 +1,5 @@
 import os
+import io
 import json
 import re
 import math
@@ -40,6 +41,56 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'admin_login'
 
+# ─── Rich text (Quill) / Markdown ─────────────────────────────────────────────
+
+BLEACH_TAGS = list(bleach.sanitizer.ALLOWED_TAGS) + [
+    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code',
+    'ul', 'ol', 'li', 'strong', 'em', 'a', 'img', 'br', 'hr', 'table',
+    'thead', 'tbody', 'tr', 'th', 'td', 'figure', 'figcaption', 'mark',
+    'del', 'ins', 'sup', 'sub', 'details', 'summary', 'span', 's', 'u',
+]
+BLEACH_ATTRS = {
+    'a': ['href', 'title', 'target', 'rel', 'class'],
+    'img': ['src', 'alt', 'title', 'class', 'width', 'height'],
+    'p': ['class'], 'span': ['class'], 'blockquote': ['class'],
+    'h1': ['class'], 'h2': ['class'], 'h3': ['class'], 'h4': ['class'],
+    'ol': ['class'], 'ul': ['class'], 'li': ['class'], 'pre': ['class'], 'code': ['class'],
+}
+# Bleach 6+: allowed URL schemes for href, src, etc.
+BLEACH_PROTOCOLS = frozenset({'http', 'https', 'mailto', 'tel', 'data'})
+
+
+def _strip_html_tags(text):
+    if not text:
+        return ''
+    return re.sub(r'<[^>]+>', ' ', str(text))
+
+
+def _rich_body_has_visible_content(html):
+    """True if stored HTML is more than an empty Quill placeholder (e.g. <p><br></p>)."""
+    if not html or not str(html).strip():
+        return False
+    h = str(html)
+    if re.search(r'<img\s[^>]*\bsrc\s*=', h, re.I):
+        return True
+    if re.search(r'<iframe\b', h, re.I):
+        return True
+    if re.search(r'<video\b', h, re.I):
+        return True
+    plain = _strip_html_tags(h).replace('\u00a0', ' ')
+    plain = re.sub(r'\s+', ' ', plain).strip()
+    return bool(plain)
+
+
+def _empty_quill_to_blank(html):
+    """Store '' instead of <p><br></p> when the secondary-language editor was not used."""
+    if not html or not str(html).strip():
+        return ''
+    if _rich_body_has_visible_content(html):
+        return html
+    return ''
+
+
 # ─── Models ───────────────────────────────────────────────────────────────────
 
 class User(UserMixin, db.Model):
@@ -76,10 +127,12 @@ class SiteSettings(db.Model):
 
 
 class Post(db.Model):
+    """Blog post. Columns title_fr / excerpt_fr / body_fr store Kiswahili (legacy names)."""
+
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(200), unique=True, nullable=False)
     title_en = db.Column(db.String(300), nullable=False)
-    title_fr = db.Column(db.String(300))
+    title_fr = db.Column(db.String(300))  # Kiswahili
     excerpt_en = db.Column(db.Text)
     excerpt_fr = db.Column(db.Text)
     body_en = db.Column(db.Text, nullable=False)
@@ -91,23 +144,67 @@ class Post(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    @staticmethod
+    def body_looks_like_html(body):
+        """Detect Quill/rich HTML vs legacy Markdown (avoid sending HTML through markdown2)."""
+        if not body or not str(body).strip():
+            return False
+        s = str(body).lstrip()
+        if not s.startswith('<'):
+            return False
+        b = str(body)
+        # Opening tags (Quill) or any closing tag => treat as HTML
+        if '</' in b:
+            return True
+        opens = (
+            '<p', '<h1', '<h2', '<h3', '<h4', '<h5', '<h6', '<ul', '<ol', '<li',
+            '<blockquote', '<div', '<pre', '<span', '<img', '<a ', '<br',
+            '<table', '<strong', '<em', '<u', '<code', '<hr',
+        )
+        return any(x in b for x in opens)
+
+    def _raw_body(self, lang='en'):
+        """Body for public display. Kiswahili falls back to English when SW HTML is empty placeholder."""
+        if lang == 'en':
+            return self.body_en or ''
+        sw = self.body_fr
+        if sw and str(sw).strip() and _rich_body_has_visible_content(sw):
+            return sw
+        return self.body_en or ''
+
     def reading_time(self, lang='en'):
-        body = self.body_en if lang == 'en' else (self.body_fr or self.body_en)
-        words = len(re.findall(r'\w+', body))
+        body = self._raw_body(lang)
+        plain = _strip_html_tags(body) if self.body_looks_like_html(body) else body
+        words = len(re.findall(r'\w+', plain))
         minutes = max(1, math.ceil(words / 200))
         return minutes
 
+    def body_for_editor(self, lang='en'):
+        """HTML for Quill; legacy Markdown is converted once for editing."""
+        raw = self.body_en if lang == 'en' else (self.body_fr or '')
+        if not raw or not str(raw).strip():
+            return ''
+        if self.body_looks_like_html(raw):
+            return raw
+        html = markdown2.markdown(
+            raw, extras=['fenced-code-blocks', 'tables', 'strike', 'footnotes', 'task_list']
+        )
+        return html
+
     def rendered_body(self, lang='en'):
-        body = self.body_en if lang == 'en' else (self.body_fr or self.body_en)
-        allowed_tags = list(bleach.sanitizer.ALLOWED_TAGS) + [
-            'p','h1','h2','h3','h4','h5','h6','blockquote','pre','code',
-            'ul','ol','li','strong','em','a','img','br','hr','table',
-            'thead','tbody','tr','th','td','figure','figcaption','mark',
-            'del','ins','sup','sub','details','summary'
-        ]
-        allowed_attrs = {'a': ['href','title','target','rel'], 'img': ['src','alt','title','class']}
-        html = markdown2.markdown(body, extras=['fenced-code-blocks','tables','strike','footnotes','task_list'])
-        return bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs)
+        body = self._raw_body(lang)
+        if self.body_looks_like_html(body):
+            return bleach.clean(
+                body, tags=BLEACH_TAGS, attributes=BLEACH_ATTRS,
+                protocols=BLEACH_PROTOCOLS, strip=True,
+            )
+        html = markdown2.markdown(
+            body, extras=['fenced-code-blocks', 'tables', 'strike', 'footnotes', 'task_list']
+        )
+        return bleach.clean(
+            html, tags=BLEACH_TAGS, attributes=BLEACH_ATTRS,
+            protocols=BLEACH_PROTOCOLS, strip=True,
+        )
 
     def tag_list(self):
         if not self.tags:
@@ -123,6 +220,16 @@ class Subscriber(db.Model):
     active = db.Column(db.Boolean, default=True)
 
 
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False, index=True)
+    author_name = db.Column(db.String(120), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    approved = db.Column(db.Boolean, default=True)
+    post = db.relationship('Post', backref=db.backref('comments', lazy='dynamic'))
+
+
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 @login_manager.user_loader
@@ -134,13 +241,95 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def cloudinary_configured():
+    return bool(
+        os.environ.get('CLOUDINARY_URL')
+        or (
+            os.environ.get('CLOUDINARY_CLOUD_NAME')
+            and os.environ.get('CLOUDINARY_API_KEY')
+            and os.environ.get('CLOUDINARY_API_SECRET')
+        )
+    )
+
+
+def _cloudinary_upload_stream(stream, folder, public_id=None, resource_type='auto', fmt=None):
+    import cloudinary
+    import cloudinary.uploader
+
+    if os.environ.get('CLOUDINARY_URL'):
+        cloudinary.config()
+    else:
+        cloudinary.config(
+            cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+            api_key=os.environ.get('CLOUDINARY_API_KEY'),
+            api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+        )
+    opts = {'folder': f"lawblog/{folder}".strip('/'), 'resource_type': resource_type}
+    if public_id:
+        opts['public_id'] = public_id
+    if fmt:
+        opts['format'] = fmt
+    result = cloudinary.uploader.upload(stream, **opts)
+    return result['secure_url']
+
+
 def save_upload(file, subfolder='', resize=None):
-    filename = secure_filename(file.filename)
+    """Save to local static/uploads or Cloudinary when configured (recommended on Railway)."""
+    filename = secure_filename(file.filename or '')
     ts = datetime.utcnow().strftime('%Y%m%d%H%M%S')
     name, ext = os.path.splitext(filename)
     safe_name = slugify(name) if name else 'file'
-    filename = f"{ts}_{safe_name}{ext}"
+    unique_base = f"{ts}_{safe_name}"
 
+    try:
+        file.seek(0)
+    except (OSError, AttributeError):
+        pass
+
+    folder = subfolder or 'misc'
+
+    if cloudinary_configured():
+        ext_l = ext.lower()
+        if ext_l == '.pdf':
+            try:
+                file.seek(0)
+            except (OSError, AttributeError):
+                pass
+            return _cloudinary_upload_stream(
+                file.stream if hasattr(file, 'stream') else file,
+                folder,
+                public_id=unique_base,
+                resource_type='raw',
+            )
+
+        if resize and ext_l in ('.jpg', '.jpeg', '.png', '.webp'):
+            try:
+                file.seek(0)
+            except (OSError, AttributeError):
+                pass
+            img = Image.open(file)
+            img.thumbnail(resize)
+            buf = io.BytesIO()
+            save_kw = {'quality': 90}
+            if ext_l == '.png':
+                img.save(buf, format='PNG')
+            else:
+                img.save(buf, format='JPEG', **save_kw)
+            buf.seek(0)
+            return _cloudinary_upload_stream(buf, folder, public_id=unique_base, resource_type='image')
+
+        try:
+            file.seek(0)
+        except (OSError, AttributeError):
+            pass
+        return _cloudinary_upload_stream(
+            file.stream if hasattr(file, 'stream') else file,
+            folder,
+            public_id=unique_base,
+            resource_type='image',
+        )
+
+    filename = f"{unique_base}{ext}"
     if subfolder:
         dest_dir = os.path.join(app.config['UPLOAD_FOLDER'], subfolder)
         rel = f"uploads/{subfolder}/{filename}"
@@ -152,10 +341,18 @@ def save_upload(file, subfolder='', resize=None):
     path = os.path.join(dest_dir, filename)
 
     if resize and ext.lower() in ('.jpg', '.jpeg', '.png', '.webp'):
+        try:
+            file.seek(0)
+        except (OSError, AttributeError):
+            pass
         img = Image.open(file)
         img.thumbnail(resize)
         img.save(path, quality=90)
     else:
+        try:
+            file.seek(0)
+        except (OSError, AttributeError):
+            pass
         file.save(path)
 
     return rel
@@ -189,25 +386,30 @@ def add_to_brevo(email, name=''):
 
 
 def get_lang():
-    return session.get('lang', 'en')
+    l = session.get('lang', 'en')
+    if l == 'fr':
+        session['lang'] = 'sw'
+        l = 'sw'
+    return l if l in ('en', 'sw') else 'en'
 
 
 def get_settings():
     return {
         'name': SiteSettings.get('name', 'Counsel & Craft'),
         'tagline_en': SiteSettings.get('tagline_en', 'Law · Writing · Youth'),
-        'tagline_fr': SiteSettings.get('tagline_fr', 'Droit · Écriture · Jeunesse'),
+        'tagline_fr': SiteSettings.get('tagline_fr', 'Sheria · Uandishi · Vijana'),
         'bio_en': SiteSettings.get('bio_en', 'A law student, writer, and voice for the youth.'),
-        'bio_fr': SiteSettings.get('bio_fr', 'Étudiant en droit, écrivain et voix de la jeunesse.'),
+        'bio_fr': SiteSettings.get('bio_fr', 'Mwanafunzi wa sheria, mwandishi, na sauti ya vijana.'),
         'email': SiteSettings.get('email', ''),
         'twitter': SiteSettings.get('twitter', ''),
         'linkedin': SiteSettings.get('linkedin', ''),
         'instagram': SiteSettings.get('instagram', ''),
         'logo': SiteSettings.get('logo', ''),
         'avatar': SiteSettings.get('avatar', ''),
+        'banner_image': SiteSettings.get('banner_image', ''),
         'cv': SiteSettings.get('cv', ''),
         'hero_quote_en': SiteSettings.get('hero_quote_en', 'Justice is the constant will to render to every man his due.'),
-        'hero_quote_fr': SiteSettings.get('hero_quote_fr', 'La justice est la volonté constante de rendre à chacun ce qui lui est dû.'),
+        'hero_quote_fr': SiteSettings.get('hero_quote_fr', 'Haki ni nia thabiti ya kumpa kila mtu kilicho chake.'),
         'recaptcha_site_key': os.environ.get('RECAPTCHA_SITE_KEY', ''),
     }
 
@@ -224,6 +426,8 @@ def asset_filter(path):
     if not path:
         return ''
     path = path.strip().lstrip('/')
+    if path.startswith('https://') or path.startswith('http://'):
+        return path
     if path.startswith('static/'):
         path = path[7:]
     from flask import url_for as _uf
@@ -237,7 +441,7 @@ def asset_filter(path):
 
 @app.route('/set-lang/<lang>')
 def set_lang(lang):
-    if lang in ('en', 'fr'):
+    if lang in ('en', 'sw'):
         session['lang'] = lang
     return redirect(request.referrer or url_for('index'))
 
@@ -277,7 +481,8 @@ def post(slug):
     lang = get_lang()
     p = Post.query.filter_by(slug=slug, published=True).first_or_404()
     related = Post.query.filter(Post.published==True, Post.id!=p.id).order_by(Post.created_at.desc()).limit(3).all()
-    return render_template('public/post.html', post=p, related=related, lang=lang)
+    comments = p.comments.filter_by(approved=True).order_by(Comment.created_at.asc()).all()
+    return render_template('public/post.html', post=p, related=related, comments=comments, lang=lang)
 
 
 @app.route('/portfolio')
@@ -312,6 +517,39 @@ def subscribe():
     db.session.commit()
     add_to_brevo(email, name)
     return jsonify({'ok': True, 'msg': 'You\'re in! Thank you for subscribing.'})
+
+
+@app.route('/blog/<slug>/comment', methods=['POST'])
+def post_comment(slug):
+    p = Post.query.filter_by(slug=slug, published=True).first_or_404()
+    data = request.get_json(silent=True) or {}
+    name = (data.get('author_name') or '').strip()[:120]
+    body = (data.get('body') or '').strip()
+    token = data.get('recaptcha_token', '')
+
+    if not name or len(name) < 2:
+        return jsonify({'ok': False, 'msg': 'Please enter your name.'}), 400
+    if not body or len(body) < 3:
+        return jsonify({'ok': False, 'msg': 'Please write a comment.'}), 400
+    if len(body) > 4000:
+        return jsonify({'ok': False, 'msg': 'Comment is too long.'}), 400
+
+    if not verify_recaptcha(token):
+        return jsonify({'ok': False, 'msg': 'reCAPTCHA failed. Please try again.'}), 400
+
+    clean_body = bleach.clean(body, tags=[], strip=True)
+    c = Comment(post_id=p.id, author_name=name, body=clean_body, approved=True)
+    db.session.add(c)
+    db.session.commit()
+    return jsonify({
+        'ok': True,
+        'msg': 'Thank you! Your comment is published.',
+        'comment': {
+            'author_name': c.author_name,
+            'body': c.body,
+            'created_at': c.created_at.strftime('%b %d, %Y'),
+        },
+    })
 
 
 @app.route('/uploads/<path:filename>')
@@ -371,10 +609,15 @@ def admin_settings():
         for field, subfolder, resize in [
             ('logo', 'branding', (400, 400)),
             ('avatar', 'branding', (800, 800)),
+            ('banner_image', 'branding', (1920, 720)),
         ]:
             if field in request.files and request.files[field].filename:
                 f = request.files[field]
                 if allowed_file(f.filename):
+                    try:
+                        f.seek(0)
+                    except (OSError, AttributeError):
+                        pass
                     rel = save_upload(f, subfolder, resize)
                     SiteSettings.set(field, rel)
 
@@ -382,6 +625,10 @@ def admin_settings():
         if 'cv' in request.files and request.files['cv'].filename:
             f = request.files['cv']
             if f.filename.endswith('.pdf'):
+                try:
+                    f.seek(0)
+                except (OSError, AttributeError):
+                    pass
                 rel = save_upload(f, 'documents')
                 SiteSettings.set('cv', rel)
 
@@ -417,6 +664,10 @@ def admin_new_post():
         if 'cover_image' in request.files and request.files['cover_image'].filename:
             f = request.files['cover_image']
             if allowed_file(f.filename):
+                try:
+                    f.seek(0)
+                except (OSError, AttributeError):
+                    pass
                 cover = save_upload(f, 'covers', (1400, 800))
 
         post = Post(
@@ -426,7 +677,7 @@ def admin_new_post():
             excerpt_en=request.form.get('excerpt_en', ''),
             excerpt_fr=request.form.get('excerpt_fr', ''),
             body_en=request.form.get('body_en', ''),
-            body_fr=request.form.get('body_fr', ''),
+            body_fr=_empty_quill_to_blank(request.form.get('body_fr', '')),
             tags=request.form.get('tags', ''),
             cover_image=cover,
             published='published' in request.form,
@@ -449,7 +700,7 @@ def admin_edit_post(post_id):
         post.excerpt_en = request.form.get('excerpt_en', '')
         post.excerpt_fr = request.form.get('excerpt_fr', '')
         post.body_en = request.form.get('body_en', '')
-        post.body_fr = request.form.get('body_fr', '')
+        post.body_fr = _empty_quill_to_blank(request.form.get('body_fr', ''))
         post.tags = request.form.get('tags', '')
         post.published = 'published' in request.form
         post.featured = 'featured' in request.form
@@ -458,6 +709,10 @@ def admin_edit_post(post_id):
         if 'cover_image' in request.files and request.files['cover_image'].filename:
             f = request.files['cover_image']
             if allowed_file(f.filename):
+                try:
+                    f.seek(0)
+                except (OSError, AttributeError):
+                    pass
                 post.cover_image = save_upload(f, 'covers', (1400, 800))
 
         db.session.commit()
@@ -470,6 +725,7 @@ def admin_edit_post(post_id):
 @login_required
 def admin_delete_post(post_id):
     post = Post.query.get_or_404(post_id)
+    Comment.query.filter_by(post_id=post.id).delete()
     db.session.delete(post)
     db.session.commit()
     flash('Post deleted.', 'success')
@@ -499,10 +755,132 @@ def admin_upload_image():
         return jsonify({'error': 'No file'}), 400
     f = request.files['file']
     if f and allowed_file(f.filename):
+        try:
+            f.seek(0)
+        except (OSError, AttributeError):
+            pass
         rel = save_upload(f, 'blog')
-        url = url_for('static', filename=rel)
+        if rel.startswith('http://') or rel.startswith('https://'):
+            url = rel
+        else:
+            url = url_for('static', filename=rel)
         return jsonify({'url': url})
     return jsonify({'error': 'Invalid file'}), 400
+
+
+AI_WRITING_ACTIONS = {
+    'improve': (
+        'Improve clarity, flow, and readability. Keep the meaning. Preserve headings, lists, links, and images.'
+    ),
+    'grammar': (
+        'Fix grammar, spelling, and punctuation only. Do not change tone except where incorrect grammar forces it.'
+    ),
+    'tone': (
+        'Make the tone warmer, clearer, and more confident for a general audience. Keep facts and structure.'
+    ),
+}
+
+
+def openrouter_rewrite_editor_html(html_fragment, instruction):
+    """Rewrite HTML via OpenRouter (OpenAI-compatible chat completions API)."""
+    api_key = os.environ.get('OPENROUTER_API_KEY', '')
+    if not api_key:
+        return None, 'Add OPENROUTER_API_KEY to your environment to use AI writing tools.'
+    model = os.environ.get('OPENROUTER_MODEL', 'openai/gpt-4o-mini')
+    base = os.environ.get('OPENROUTER_API_BASE', 'https://openrouter.ai/api/v1').rstrip('/')
+    url = f'{base}/chat/completions'
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    referer = os.environ.get('OPENROUTER_HTTP_REFERER', '').strip()
+    if referer:
+        headers['HTTP-Referer'] = referer
+    app_title = os.environ.get('OPENROUTER_APP_TITLE', '').strip()
+    if app_title:
+        headers['X-Title'] = app_title
+    system = (
+        'You are a professional editor. Reply with ONLY an HTML fragment (no markdown, no code fences, '
+        'no <!DOCTYPE> or <html> wrapper). Use tags such as: p, br, strong, em, u, s, h1, h2, h3, ul, ol, li, '
+        'a, img, blockquote, pre, code. For external links use target="_blank" rel="noopener noreferrer". '
+        'Preserve img src and a href when possible.'
+    )
+    try:
+        resp = requests.post(
+            url,
+            headers=headers,
+            json={
+                'model': model,
+                'messages': [
+                    {'role': 'system', 'content': system},
+                    {'role': 'user', 'content': f'{instruction}\n\nHTML:\n{html_fragment}'},
+                ],
+                'temperature': 0.35,
+                'max_tokens': 8192,
+            },
+            timeout=120,
+        )
+    except requests.RequestException:
+        return None, 'Could not reach OpenRouter. Try again later.'
+    if resp.status_code != 200:
+        try:
+            data = resp.json()
+            err_obj = data.get('error')
+            if isinstance(err_obj, dict):
+                err = err_obj.get('message', str(err_obj))[:500]
+            elif isinstance(err_obj, str):
+                err = err_obj[:500]
+            else:
+                err = resp.text[:500] or 'OpenRouter request failed'
+        except Exception:
+            err = resp.text[:500] or 'OpenRouter request failed'
+        return None, err
+    try:
+        payload = resp.json()
+        choices = payload.get('choices') or []
+        content = (choices[0].get('message') or {}).get('content') or ''
+    except (IndexError, KeyError, TypeError):
+        return None, 'Unexpected AI response.'
+    content = content.strip()
+    if content.startswith('```'):
+        content = re.sub(r'^```(?:html|HTML)?\s*\n?', '', content)
+        content = re.sub(r'\n?```\s*$', '', content).strip()
+    if not content:
+        return None, 'AI returned empty content.'
+    return content, None
+
+
+@app.route('/admin/ai/writing', methods=['POST'])
+@login_required
+def admin_ai_writing():
+    data = request.get_json(silent=True) or {}
+    content = data.get('content') or ''
+    action = (data.get('action') or '').strip().lower()
+    if action not in AI_WRITING_ACTIONS:
+        return jsonify({'ok': False, 'error': 'Invalid action.'}), 400
+    if len(content) > 200_000:
+        return jsonify({'ok': False, 'error': 'Content too large.'}), 400
+    result, err = openrouter_rewrite_editor_html(content, AI_WRITING_ACTIONS[action])
+    if err:
+        return jsonify({'ok': False, 'error': err}), 503
+    return jsonify({'ok': True, 'result': result})
+
+
+@app.route('/admin/comments')
+@login_required
+def admin_comments():
+    rows = (Comment.query.join(Post).order_by(Comment.created_at.desc()).all())
+    return render_template('admin/comments.html', comments=rows)
+
+
+@app.route('/admin/comments/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def admin_delete_comment(comment_id):
+    c = Comment.query.get_or_404(comment_id)
+    db.session.delete(c)
+    db.session.commit()
+    flash('Comment removed.', 'success')
+    return redirect(url_for('admin_comments'))
 
 
 # ─── Init ─────────────────────────────────────────────────────────────────────

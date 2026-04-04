@@ -24,7 +24,7 @@
           <input type="text" name="tagline_en" class="form-input" value="{{ settings.tagline_en }}" />
         </div>
         <div class="form-group">
-          <label class="form-label">Tagline (Français)</label>
+          <label class="form-label">Tagline (Kiswahili)</label>
           <input type="text" name="tagline_fr" class="form-input" value="{{ settings.tagline_fr }}" />
         </div>
       </div>
@@ -34,7 +34,7 @@
           <textarea name="bio_en" class="form-textarea" rows="4">{{ settings.bio_en }}</textarea>
         </div>
         <div class="form-group">
-          <label class="form-label">Bio (Français)</label>
+          <label class="form-label">Bio (Kiswahili)</label>
           <textarea name="bio_fr" class="form-textarea" rows="4">{{ settings.bio_fr }}</textarea>
         </div>
       </div>
@@ -49,7 +49,7 @@
           <textarea name="hero_quote_en" class="form-textarea" rows="3">{{ settings.hero_quote_en }}</textarea>
         </div>
         <div class="form-group">
-          <label class="form-label">Quote (Français)</label>
+          <label class="form-label">Quote (Kiswahili)</label>
           <textarea name="hero_quote_fr" class="form-textarea" rows="3">{{ settings.hero_quote_fr }}</textarea>
         </div>
       </div>
@@ -78,6 +78,17 @@
     <div class="admin-card">
       <h3 style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:1.5rem;">📁 Files & Media</h3>
       <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Homepage banner (optional)</label>
+          {% if settings.banner_image %}
+          <div style="margin-bottom:0.5rem;"><img src="{{ settings.banner_image|asset }}" style="max-height:80px;width:100%;object-fit:cover;border-radius:6px;" /></div>
+          {% endif %}
+          <label class="file-upload-zone">
+            <input type="file" name="banner_image" accept="image/*" />
+            <i class="fas fa-panorama" style="margin-bottom:0.25rem;"></i>
+            <span style="font-size:0.8rem;">Wide image behind hero (~1920×720)</span>
+          </label>
+        </div>
         <div class="form-group">
           <label class="form-label">Logo</label>
           {% if settings.logo %}

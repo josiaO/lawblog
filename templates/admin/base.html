@@ -33,6 +33,9 @@
       <a href="{{ url_for('admin_subscribers') }}" class="sidebar-link {% if request.endpoint=='admin_subscribers' %}active{% endif %}">
         <i class="fas fa-envelope"></i> Subscribers
       </a>
+      <a href="{{ url_for('admin_comments') }}" class="sidebar-link {% if request.endpoint in ('admin_comments','admin_delete_comment') %}active{% endif %}">
+        <i class="fas fa-comments"></i> Comments
+      </a>
       <a href="{{ url_for('admin_settings') }}" class="sidebar-link {% if request.endpoint=='admin_settings' %}active{% endif %}">
         <i class="fas fa-cog"></i> Site Settings
       </a>

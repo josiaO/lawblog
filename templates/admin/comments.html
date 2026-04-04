@@ -1,0 +1,44 @@
+{% extends "admin/base.html" %}
+{% block title %}Comments{% endblock %}
+{% block page_title %}Comments{% endblock %}
+
+{% block content %}
+<div class="admin-card" style="margin-bottom:1rem;">
+  <p style="color:var(--text-2); font-size:0.9rem;">
+    Comments appear on published posts after visitors submit them (protected by reCAPTCHA). Remove spam or unwanted messages here.
+  </p>
+</div>
+
+{% if not comments %}
+<div class="admin-card"><p style="color:var(--text-3);">No comments yet.</p></div>
+{% else %}
+<div class="admin-card" style="padding:0; overflow:hidden;">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Post</th>
+        <th>Author</th>
+        <th>Message</th>
+        <th style="width:100px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in comments %}
+      <tr>
+        <td style="white-space:nowrap; font-size:0.85rem; color:var(--text-3);">{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td><a href="{{ url_for('post', slug=c.post.slug) }}" target="_blank" style="color:var(--accent);">{{ c.post.title_en[:50] }}{% if c.post.title_en|length > 50 %}…{% endif %}</a></td>
+        <td>{{ c.author_name }}</td>
+        <td style="max-width:320px; font-size:0.88rem; color:var(--text-2);">{{ c.body[:280] }}{% if c.body|length > 280 %}…{% endif %}</td>
+        <td>
+          <form method="POST" action="{{ url_for('admin_delete_comment', comment_id=c.id) }}" onsubmit="return confirm('Delete this comment?');">
+            <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:rgba(229,115,115,0.4);">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -5,16 +5,16 @@
 <div class="blog-header">
   <div class="section-inner">
     <div class="blog-hero-title animate-fade-up">
-      {% if lang=='en' %}<span>Essays.</span> Ideas. <span>Law.</span>{% else %}<span>Essais.</span> Idées. <span>Droit.</span>{% endif %}
+      {% if lang=='en' %}<span>Essays.</span> Ideas. <span>Law.</span>{% else %}<span>Makala.</span> Mawazo. <span>Sheria.</span>{% endif %}
     </div>
     <p class="animate-fade-up delay-1" style="color:var(--text-2); max-width:480px; margin: 1.5rem auto 0; font-size:1.05rem;">
-      {% if lang=='en' %}Thoughts on law, justice, youth, and the written word.{% else %}Réflexions sur le droit, la justice, la jeunesse et les mots.{% endif %}
+      {% if lang=='en' %}Thoughts on law, justice, youth, and the written word.{% else %}Mawazo kuhusu sheria, haki, vijana, na neno lililoandikwa.{% endif %}
     </p>
 
     {% if all_tags %}
     <div class="tag-filter animate-fade-up delay-2">
       <a href="{{ url_for('blog') }}" class="tag-btn {% if not active_tag %}active{% endif %}">
-        {% if lang=='en' %}All{% else %}Tous{% endif %}
+        {% if lang=='en' %}All{% else %}Yote{% endif %}
       </a>
       {% for tag in all_tags %}
       <a href="{{ url_for('blog', tag=tag) }}" class="tag-btn {% if active_tag==tag %}active{% endif %}">{{ tag }}</a>
@@ -53,7 +53,7 @@
           </p>
           <div class="card-footer">
             <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
-            <span class="card-reading">{{ p.reading_time(lang) }} min read</span>
+            <span class="card-reading">{{ p.reading_time(lang) }} {% if lang=='en' %}min read{% else %}dk kusoma{% endif %}</span>
             <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
           </div>
         </div>
@@ -83,7 +83,7 @@
     {% else %}
     <div style="text-align:center; padding: 6rem 0; color:var(--text-3);">
       <div style="font-size:3rem; margin-bottom:1rem;">✍</div>
-      <p>{% if lang=='en' %}No posts yet. Check back soon!{% else %}Aucun article pour le moment.{% endif %}</p>
+      <p>{% if lang=='en' %}No posts yet. Check back soon!{% else %}Bado hakuna machapisho. Rudi hivi karibuni!{% endif %}</p>
     </div>
     {% endif %}
   </div>

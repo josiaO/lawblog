@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
   {% block head %}{% endblock %}
 </head>
-<body>
+<body data-recaptcha-key="{{ settings.recaptcha_site_key or '' }}">
 
 <!-- ── Cursor glow ── -->
 <div class="cursor-glow" id="cursorGlow"></div>
@@ -40,13 +40,13 @@
 
     <ul class="nav-links">
       <li><a href="{{ url_for('index') }}" {% if request.endpoint=='index' %}class="active"{% endif %}>
-        {% if lang=='en' %}Home{% else %}Accueil{% endif %}
+        {% if lang=='en' %}Home{% else %}Nyumbani{% endif %}
       </a></li>
       <li><a href="{{ url_for('about') }}" {% if request.endpoint=='about' %}class="active"{% endif %}>
-        {% if lang=='en' %}About{% else %}À propos{% endif %}
+        {% if lang=='en' %}About{% else %}Kuhusu{% endif %}
       </a></li>
-      <li><a href="{{ url_for('blog') }}" {% if request.endpoint in ('blog','post') %}class="active"{% endif %}>
-        {% if lang=='en' %}Blog{% else %}Blog{% endif %}
+      <li><a href="{{ url_for('blog') }}" class="nav-blog-cta {% if request.endpoint in ('blog','post') %}active{% endif %}">
+        {% if lang=='en' %}Blog{% else %}Blogu{% endif %}
       </a></li>
       <li><a href="{{ url_for('portfolio') }}" {% if request.endpoint=='portfolio' %}class="active"{% endif %}>
         {% if lang=='en' %}Portfolio{% else %}Portfolio{% endif %}
@@ -58,7 +58,7 @@
       <div class="lang-toggle">
         <a href="{{ url_for('set_lang', lang='en') }}" class="lang-btn {% if lang=='en' %}active{% endif %}">EN</a>
         <span class="lang-sep">/</span>
-        <a href="{{ url_for('set_lang', lang='fr') }}" class="lang-btn {% if lang=='fr' %}active{% endif %}">FR</a>
+        <a href="{{ url_for('set_lang', lang='sw') }}" class="lang-btn {% if lang=='sw' %}active{% endif %}">SW</a>
       </div>
 
       <!-- Theme -->
@@ -77,14 +77,14 @@
   <!-- Mobile menu -->
   <div class="mobile-menu" id="mobileMenu">
     <ul>
-      <li><a href="{{ url_for('index') }}">{% if lang=='en' %}Home{% else %}Accueil{% endif %}</a></li>
-      <li><a href="{{ url_for('about') }}">{% if lang=='en' %}About{% else %}À propos{% endif %}</a></li>
-      <li><a href="{{ url_for('blog') }}">Blog</a></li>
+      <li><a href="{{ url_for('index') }}">{% if lang=='en' %}Home{% else %}Nyumbani{% endif %}</a></li>
+      <li><a href="{{ url_for('about') }}">{% if lang=='en' %}About{% else %}Kuhusu{% endif %}</a></li>
+      <li><a href="{{ url_for('blog') }}">{% if lang=='en' %}Blog{% else %}Blogu{% endif %}</a></li>
       <li><a href="{{ url_for('portfolio') }}">Portfolio</a></li>
     </ul>
     <div class="mobile-lang">
       <a href="{{ url_for('set_lang', lang='en') }}" class="{% if lang=='en' %}active{% endif %}">EN</a>
-      <a href="{{ url_for('set_lang', lang='fr') }}" class="{% if lang=='fr' %}active{% endif %}">FR</a>
+      <a href="{{ url_for('set_lang', lang='sw') }}" class="{% if lang=='sw' %}active{% endif %}">SW</a>
     </div>
   </div>
 </nav>
@@ -108,22 +108,22 @@
   <div class="modal-box">
     <button class="modal-close" id="modalClose" aria-label="Close">×</button>
     <div class="modal-inner">
-      <div class="modal-eyebrow">{{ '📬 Stay in the loop' if lang=='en' else '📬 Restez informé' }}</div>
+      <div class="modal-eyebrow">{{ '📬 Stay in the loop' if lang=='en' else '📬 Kuwa na habari' }}</div>
       <h2 class="modal-title">
-        {{ 'Words that move, delivered to you.' if lang=='en' else 'Des mots qui bougent, livrés chez vous.' }}
+        {{ 'Words that move, delivered to you.' if lang=='en' else 'Maneno yanayohamisha, yatakufikia.' }}
       </h2>
       <p class="modal-desc">
-        {{ 'Join the newsletter — essays on law, justice & youth culture. No spam, ever.' if lang=='en' else 'Rejoignez la newsletter — essais sur le droit, la justice et la culture jeune.' }}
+        {{ 'Join the newsletter — essays on law, justice & youth culture. No spam, ever.' if lang=='en' else 'Jiunge na jarida — makala kuhusu sheria, haki na vijana. Hakuna taka.' }}
       </p>
       <div class="newsletter-form" id="newsletterForm">
-        <input type="text" id="subName" placeholder="{{ 'Your name (optional)' if lang=='en' else 'Votre prénom (optionnel)' }}" class="sub-input" />
+        <input type="text" id="subName" placeholder="{{ 'Your name (optional)' if lang=='en' else 'Jina (si lazima)' }}" class="sub-input" />
         <input type="email" id="subEmail" placeholder="{{ 'your@email.com' }}" class="sub-input" required />
         <button class="sub-btn" id="subBtn" onclick="submitSubscribe()">
-          {{ 'Subscribe' if lang=='en' else "S'abonner" }}
+          {{ 'Subscribe' if lang=='en' else 'Jiunge' }}
         </button>
       </div>
       <div class="sub-result" id="subResult" style="display:none;"></div>
-      <p class="modal-fine">{{ 'Powered by Brevo. Unsubscribe anytime.' if lang=='en' else 'Via Brevo. Désabonnez-vous à tout moment.' }}</p>
+      <p class="modal-fine">{{ 'Powered by Brevo. Unsubscribe anytime.' if lang=='en' else 'Inaendeshwa na Brevo. Jitoe wakati wowote.' }}</p>
     </div>
   </div>
 </div>
@@ -153,12 +153,12 @@
 
     <div class="footer-actions">
       <button class="footer-subscribe-btn" onclick="document.getElementById('newsletterModal').classList.add('open')">
-        {{ '✉ Subscribe to Newsletter' if lang=='en' else '✉ S\'abonner' }}
+        {{ '✉ Subscribe to Newsletter' if lang=='en' else '✉ Jiunge na jarida' }}
       </button>
     </div>
 
     <p class="footer-copy">
-      © {{ now.year }} {{ settings.name }}. {% if lang=='en' %}Crafted with purpose.{% else %}Conçu avec intention.{% endif %}
+      © {{ now.year }} {{ settings.name }}. {% if lang=='en' %}Crafted with purpose.{% else %}Imetengenezwa kwa kusudi.{% endif %}
     </p>
   </div>
 </footer>

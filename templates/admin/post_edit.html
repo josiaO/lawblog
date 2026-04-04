@@ -4,188 +4,248 @@
 {% block page_title %}{{ 'Edit Post' if post else 'New Post' }}{% endblock %}
 
 {% block head %}
-<!-- EasyMDE for rich markdown editing -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.css" />
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
 <style>
-/* ── EasyMDE overrides — scoped to avoid conflict with .editor-toolbar in admin.css ── */
+/* Post editor layout: writing tools | main | publish sidebar */
+.post-editor-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 300px;
+  gap: 1.5rem;
+  align-items: start;
+}
+.post-editor-main { min-width: 0; }
+.post-editor-settings { min-width: 0; }
 
-/* Container */
-.EasyMDEContainer {
-  border-radius: 8px;
-  overflow: visible !important;
+@media (max-width: 1100px) {
+  .post-editor-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .post-editor-main { order: 1; width: 100%; }
+  .post-editor-settings { order: 2; width: 100%; position: static !important; }
+  .writing-tools-sidebar {
+    order: 3;
+    position: static !important;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .writing-tools-sidebar .writing-tools-card {
+    flex: 1 1 280px;
+    min-width: min(100%, 260px);
+  }
 }
 
-/* THE TOOLBAR — use full specificity to beat admin.css .editor-toolbar */
-.EasyMDEContainer .editor-toolbar {
+@media (max-width: 600px) {
+  .writing-tools-sidebar { flex-direction: column; }
+  .writing-tools-sidebar .writing-tools-card { flex: 1 1 auto; min-width: 0; }
+}
+
+.writing-tools-sidebar {
+  position: sticky;
+  top: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.writing-tools-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+.writing-tools-card h3 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  margin-bottom: 0.9rem;
+}
+.writing-tool-btn {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.writing-tool-btn:last-child { margin-bottom: 0; }
+.writing-tool-btn:hover { opacity: 0.92; transform: translateX(2px); }
+.writing-tool-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.writing-tool-btn.ai {
+  background: linear-gradient(135deg, #5b4fcf 0%, #6c5ce7 100%);
+  color: #fff;
+}
+.writing-tool-btn.insert {
+  background: var(--bg-3);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.writing-tool-btn.insert:hover {
+  border-color: var(--border-accent);
+  color: var(--accent);
+}
+
+/* Quill — dark admin theme */
+.quill-wrap {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(212,175,95,0.25);
+  background: #13131c;
+}
+.quill-wrap .ql-toolbar {
   background: #1e1e2e !important;
-  border: 1px solid rgba(212,175,95,0.25) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
-  border-radius: 8px 8px 0 0 !important;
-  padding: 8px 10px !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  padding: 8px 6px !important;
   display: flex !important;
   flex-wrap: wrap !important;
-  gap: 2px !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  position: relative !important;
-  z-index: 10 !important;
-}
-
-.EasyMDEContainer .editor-toolbar button {
-  color: #c4c2d4 !important;
-  border: 1px solid transparent !important;
-  border-radius: 5px !important;
-  background: transparent !important;
-  width: 30px !important;
-  height: 30px !important;
-  display: inline-flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  font-size: 13px !important;
-  cursor: pointer !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  transition: all 0.15s !important;
+  gap: 2px !important;
+}
+.quill-wrap .ql-toolbar .ql-formats {
+  margin-right: 4px !important;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+.quill-wrap .ql-toolbar button {
+  width: 36px !important;
+  height: 36px !important;
+  padding: 6px !important;
+}
+.quill-wrap .ql-toolbar .ql-picker {
+  height: 36px !important;
+  font-size: 14px !important;
+}
+.quill-wrap .ql-toolbar .ql-picker-label {
+  padding: 4px 6px !important;
+}
+.quill-wrap .ql-toolbar .ql-stroke { stroke: #c4c2d4 !important; }
+.quill-wrap .ql-toolbar .ql-fill { fill: #c4c2d4 !important; }
+.quill-wrap .ql-toolbar button:hover .ql-stroke,
+.quill-wrap .ql-toolbar .ql-picker-label:hover .ql-stroke { stroke: #d4af5f !important; }
+.quill-wrap .ql-toolbar button:hover .ql-fill { fill: #d4af5f !important; }
+.quill-wrap .ql-toolbar button.ql-active .ql-stroke { stroke: #d4af5f !important; }
+.quill-wrap .ql-toolbar button.ql-active .ql-fill { fill: #d4af5f !important; }
+.quill-wrap .ql-container {
+  border: none !important;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 1rem;
+  min-height: 280px;
+}
+.quill-wrap .ql-editor {
+  min-height: 280px;
+  color: #e8e6f0;
+  line-height: 1.75;
+  padding: 1rem 1rem;
+  font-size: 16px;
+}
+@media (min-width: 768px) {
+  .quill-wrap .ql-container { min-height: 420px; }
+  .quill-wrap .ql-editor { min-height: 420px; padding: 1.25rem 1.5rem; }
+}
+.quill-wrap .ql-editor.ql-blank::before {
+  color: #6b6980;
+  font-style: normal;
+}
+.quill-wrap .ql-editor h1 { font-family: var(--font-display); font-size: 1.75rem; color: #e8e6f0; margin: 1em 0 0.5em; }
+.quill-wrap .ql-editor h2 { font-family: var(--font-display); font-size: 1.4rem; color: #e8e6f0; margin: 1em 0 0.5em; }
+.quill-wrap .ql-editor h3 { font-size: 1.15rem; color: #e8e6f0; margin: 1em 0 0.5em; }
+.quill-wrap .ql-editor a { color: #d4af5f; }
+.quill-wrap .ql-editor blockquote {
+  border-left: 4px solid #d4af5f;
+  margin: 1em 0;
+  padding-left: 1rem;
+  color: #9b99aa;
+}
+.quill-wrap .ql-editor pre.ql-syntax {
+  background: #0a0a0f;
+  color: #e8e6f0;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
 }
 
-.EasyMDEContainer .editor-toolbar button:hover,
-.EasyMDEContainer .editor-toolbar button.active {
-  background: rgba(212,175,95,0.15) !important;
-  color: #d4af5f !important;
-  border-color: rgba(212,175,95,0.3) !important;
+[data-theme="light"] .quill-wrap {
+  background: #fffdf7;
+  border-color: rgba(139,90,30,0.25);
 }
-
-.EasyMDEContainer .editor-toolbar i.separator {
-  border-left: 1px solid rgba(255,255,255,0.1) !important;
-  width: 1px !important;
-  margin: 0 4px !important;
-}
-
-/* CodeMirror editor area */
-.EasyMDEContainer .CodeMirror {
-  background: #13131c !important;
-  color: #e8e6f0 !important;
-  font-family: 'DM Mono', 'Fira Code', monospace !important;
-  font-size: 15px !important;
-  line-height: 1.85 !important;
-  min-height: 520px !important;
-  height: auto !important;
-  border: 1px solid rgba(212,175,95,0.25) !important;
-  border-top: none !important;
-  border-radius: 0 0 8px 8px !important;
-  padding: 16px !important;
-}
-
-.EasyMDEContainer .CodeMirror-scroll {
-  min-height: 520px !important;
-  overflow-y: auto !important;
-  overflow-x: auto !important;
-}
-
-.EasyMDEContainer .CodeMirror-lines {
-  padding: 4px 0 !important;
-}
-
-.CodeMirror-cursor {
-  border-left: 2px solid #d4af5f !important;
-}
-
-/* Placeholder */
-.EasyMDEContainer .CodeMirror .cm-comment {
-  color: #6b6980 !important;
-}
-
-/* Status bar */
-.EasyMDEContainer .editor-statusbar {
-  background: #0f0f18 !important;
-  color: #6b6980 !important;
-  border: 1px solid rgba(255,255,255,0.06) !important;
-  border-top: none !important;
-  border-radius: 0 0 8px 8px !important;
-  padding: 4px 12px !important;
-  font-size: 11px !important;
-}
-
-/* Preview mode */
-.EasyMDEContainer .editor-preview,
-.EasyMDEContainer .editor-preview-side {
-  background: #111118 !important;
-  color: #e8e6f0 !important;
-  border: 1px solid rgba(212,175,95,0.25) !important;
-  padding: 20px 24px !important;
-  font-family: 'DM Sans', sans-serif !important;
-  font-size: 15px !important;
-  line-height: 1.8 !important;
-}
-
-.EasyMDEContainer .editor-preview h1,
-.EasyMDEContainer .editor-preview h2,
-.EasyMDEContainer .editor-preview h3 {
-  color: #e8e6f0 !important;
-  font-family: 'Playfair Display', serif !important;
-  margin: 1.5em 0 0.5em !important;
-}
-
-.EasyMDEContainer .editor-preview blockquote {
-  border-left: 4px solid #d4af5f !important;
-  background: rgba(212,175,95,0.06) !important;
-  padding: 0.75rem 1.25rem !important;
-  color: #9b99aa !important;
-  margin: 1em 0 !important;
-  border-radius: 0 8px 8px 0 !important;
-}
-
-.EasyMDEContainer .editor-preview pre {
-  background: #0a0a0f !important;
-  border: 1px solid rgba(255,255,255,0.07) !important;
-  border-radius: 6px !important;
-  padding: 12px 16px !important;
-}
-
-.EasyMDEContainer .editor-preview code {
-  color: #d4af5f !important;
-  background: rgba(212,175,95,0.1) !important;
-  padding: 0.15em 0.45em !important;
-  border-radius: 4px !important;
-  font-family: 'DM Mono', monospace !important;
-}
-
-.EasyMDEContainer .editor-preview a {
-  color: #d4af5f !important;
-  text-decoration: underline !important;
-}
-
-/* Side-by-side layout */
-.EasyMDEContainer.sided {
-  display: flex !important;
-}
-.EasyMDEContainer.sided .CodeMirror {
-  border-radius: 0 !important;
-  border-right: none !important;
-}
-.EasyMDEContainer.sided .editor-preview-side {
-  border-radius: 0 0 8px 0 !important;
-}
-
-/* Fullscreen */
-.EasyMDEContainer .CodeMirror-fullscreen,
-.EasyMDEContainer.fullscreen {
-  z-index: 9999 !important;
-  background: #0a0a0f !important;
-}
-
-/* Light mode support */
-[data-theme="light"] .EasyMDEContainer .editor-toolbar {
+[data-theme="light"] .quill-wrap .ql-toolbar {
   background: #f0ede4 !important;
-  border-color: rgba(139,90,30,0.2) !important;
+  border-bottom-color: rgba(0,0,0,0.08) !important;
 }
-[data-theme="light"] .EasyMDEContainer .editor-toolbar button {
-  color: #5a5548 !important;
+[data-theme="light"] .quill-wrap .ql-toolbar .ql-stroke { stroke: #5a5548 !important; }
+[data-theme="light"] .quill-wrap .ql-toolbar .ql-fill { fill: #5a5548 !important; }
+[data-theme="light"] .quill-wrap .ql-editor { color: #1a1814; }
+[data-theme="light"] .quill-wrap .ql-editor h1,
+[data-theme="light"] .quill-wrap .ql-editor h2,
+[data-theme="light"] .quill-wrap .ql-editor h3 { color: #1a1814; }
+
+/* Off-screen but NOT display:none — fields inside display:none tabs break form POST on some browsers */
+#postForm { position: relative; }
+.quill-sync-fields {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
 }
-[data-theme="light"] .EasyMDEContainer .CodeMirror {
-  background: #fffdf7 !important;
-  color: #1a1814 !important;
-  border-color: rgba(139,90,30,0.2) !important;
+.body-field-hidden {
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  resize: none;
+}
+
+.outline-preview-item {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.35;
+}
+.outline-preview-item:last-child { border-bottom: none; }
+.outline-preview-h1 { font-weight: 700; color: var(--text); }
+.outline-preview-h2 { padding-left: 0.5rem; }
+.outline-preview-h3 { padding-left: 1rem; font-size: 0.78rem; }
+
+/* Tabs: scroll on narrow screens */
+@media (max-width: 480px) {
+  .tab-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.35rem;
+    padding-bottom: 2px;
+  }
+  .tab-btn {
+    flex: 0 0 auto;
+    padding: 0.55rem 1rem;
+    min-height: 44px;
+  }
 }
 </style>
 {% endblock %}
@@ -202,81 +262,104 @@
 {% block content %}
 <form method="POST" enctype="multipart/form-data" id="postForm">
 
-  <div style="display:grid; grid-template-columns: 1fr 300px; gap: 2rem; align-items: start;">
+  <div class="quill-sync-fields" aria-hidden="true">
+    <textarea name="body_en" id="body_en_field" class="body-field-hidden" tabindex="-1"></textarea>
+    <textarea name="body_fr" id="body_fr_field" class="body-field-hidden" tabindex="-1"></textarea>
+  </div>
 
-    <!-- Main editor -->
-    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+  <script type="application/json" id="seed-body-en">{% if post %}{{ post.body_for_editor('en')|tojson }}{% else %}{{ ""|tojson }}{% endif %}</script>
+  <script type="application/json" id="seed-body-sw">{% if post %}{{ post.body_for_editor('sw')|tojson }}{% else %}{{ ""|tojson }}{% endif %}</script>
 
-      <!-- Language tabs -->
+  <div class="post-editor-layout">
+
+    <!-- Human-readable writing tools (Quill + optional AI) -->
+    <aside class="writing-tools-sidebar">
+      <div class="writing-tools-card">
+        <h3>AI writing tools</h3>
+        <p class="form-hint" style="margin-bottom:0.75rem;font-size:0.72rem;">
+          Improves the <strong>active</strong> tab. Requires <code style="font-size:0.7rem;">OPENROUTER_API_KEY</code>.
+        </p>
+        <button type="button" class="writing-tool-btn ai" data-ai="improve" title="Clarity and flow">
+          ✨ Improve writing
+        </button>
+        <button type="button" class="writing-tool-btn ai" data-ai="grammar" title="Spelling and grammar">
+          🧠 Fix grammar
+        </button>
+        <button type="button" class="writing-tool-btn ai" data-ai="tone" title="Warmer, clearer tone">
+          🎯 Improve tone
+        </button>
+      </div>
+      <div class="writing-tools-card">
+        <h3>Quick inserts</h3>
+        <button type="button" class="writing-tool-btn insert" data-insert="section">＋ Section heading</button>
+        <button type="button" class="writing-tool-btn insert" data-insert="quote">＋ Quote block</button>
+        <button type="button" class="writing-tool-btn insert" data-insert="example">＋ Example line</button>
+      </div>
+    </aside>
+
+    <div class="post-editor-main" style="display:flex; flex-direction:column; gap:1.5rem;">
+
       <div class="admin-card">
         <div class="tab-bar">
           <button type="button" class="tab-btn active" onclick="switchTab('en', this)">🇬🇧 English</button>
-          <button type="button" class="tab-btn" onclick="switchTab('fr', this)">🇫🇷 Français</button>
+          <button type="button" class="tab-btn" onclick="switchTab('sw', this)">🇹🇿 Kiswahili</button>
         </div>
 
-        <!-- English content -->
         <div id="tab-en" class="tab-pane active">
           <div class="form-group" style="margin-bottom:1rem;">
             <label class="form-label">Title (English) *</label>
             <input type="text" name="title_en" class="form-input" required
                    value="{{ post.title_en if post else '' }}"
-                   placeholder="Your compelling title here..." style="font-size:1.1rem; font-weight:600;" />
+                   placeholder="Your article title…" style="font-size:1.1rem; font-weight:600;" />
           </div>
           <div class="form-group" style="margin-bottom:1.25rem;">
-            <label class="form-label">Excerpt / Lead paragraph</label>
+            <label class="form-label">Excerpt / lead paragraph</label>
             <textarea name="excerpt_en" class="form-textarea" rows="3"
-                      placeholder="A compelling opening paragraph shown in previews...">{{ post.excerpt_en if post else '' }}</textarea>
+                      placeholder="Short preview text for listings and social…">{{ post.excerpt_en if post else '' }}</textarea>
           </div>
           <div class="form-group">
-            <label class="form-label">Body (English) — Markdown supported</label>
-            <textarea name="body_en" id="editor_en">{{ post.body_en if post else '' }}</textarea>
+            <label class="form-label">Article body — visual editor</label>
+            <p class="form-hint" style="margin-bottom:0.6rem;">Type normally. Use the toolbar for headings, lists, bold, links, and images (upload).</p>
+            <div class="quill-wrap">
+              <div id="quill_en"></div>
+            </div>
           </div>
         </div>
 
-        <!-- French content -->
-        <div id="tab-fr" class="tab-pane">
+        <div id="tab-sw" class="tab-pane">
           <div class="form-group" style="margin-bottom:1rem;">
-            <label class="form-label">Titre (Français)</label>
+            <label class="form-label">Kichwa (Kiswahili)</label>
             <input type="text" name="title_fr" class="form-input"
                    value="{{ post.title_fr if post else '' }}"
-                   placeholder="Votre titre en français..." style="font-size:1.1rem; font-weight:600;" />
+                   placeholder="Kichwa cha makala…" style="font-size:1.1rem; font-weight:600;" />
           </div>
           <div class="form-group" style="margin-bottom:1.25rem;">
-            <label class="form-label">Extrait / Introduction</label>
+            <label class="form-label">Muhtasari</label>
             <textarea name="excerpt_fr" class="form-textarea" rows="3"
-                      placeholder="Un paragraphe d'introduction accrocheur...">{{ post.excerpt_fr if post else '' }}</textarea>
+                      placeholder="Muhtasari mfupi…">{{ post.excerpt_fr if post else '' }}</textarea>
           </div>
           <div class="form-group">
-            <label class="form-label">Corps (Français) — Markdown supporté</label>
-            <textarea name="body_fr" id="editor_fr">{{ post.body_fr if post else '' }}</textarea>
+            <label class="form-label">Mwili — mhariri wa kuona</label>
+            <div class="quill-wrap">
+              <div id="quill_sw"></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Markdown cheatsheet -->
       <details class="admin-card" style="font-size:0.85rem; color:var(--text-2);">
-        <summary style="cursor:pointer; font-weight:600; color:var(--text); margin-bottom:0.5rem;">
-          📖 Markdown Quick Reference
-        </summary>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top:1rem; font-family:var(--font-mono); font-size:0.8rem;">
-          <div><code style="color:var(--accent);"># Heading 1</code></div><div>Large heading</div>
-          <div><code style="color:var(--accent);">## Heading 2</code></div><div>Medium heading</div>
-          <div><code style="color:var(--accent);">**bold**</code></div><div>Bold text</div>
-          <div><code style="color:var(--accent);">*italic*</code></div><div>Italic text</div>
-          <div><code style="color:var(--accent);">> blockquote</code></div><div>Quote block</div>
-          <div><code style="color:var(--accent);">[text](url)</code></div><div>Hyperlink</div>
-          <div><code style="color:var(--accent);">![alt](url)</code></div><div>Image</div>
-          <div><code style="color:var(--accent);">```code```</code></div><div>Code block</div>
-          <div><code style="color:var(--accent);">---</code></div><div>Horizontal rule</div>
-          <div><code style="color:var(--accent);">==mark==</code></div><div>Highlighted text</div>
-        </div>
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">Tips for non-technical writers</summary>
+        <ul style="margin-top:1rem; padding-left:1.2rem; line-height:1.7;">
+          <li>Use <strong>heading</strong> dropdown for titles and sections — no symbols to remember.</li>
+          <li>Click the <strong>image</strong> icon to upload a picture from your computer.</li>
+          <li>Older posts saved as Markdown are converted automatically when you open them; saving stores rich HTML.</li>
+        </ul>
       </details>
     </div>
 
-    <!-- Sidebar settings -->
-    <div style="display:flex; flex-direction:column; gap:1.5rem; position:sticky; top:80px;">
+    <!-- Sidebar: publish, cover, tags, outline -->
+    <div class="post-editor-settings" style="display:flex; flex-direction:column; gap:1.5rem; position:sticky; top:80px;">
 
-      <!-- Publish -->
       <div class="admin-card">
         <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:1rem;">Publish</h3>
         <div style="display:flex; flex-direction:column; gap:0.9rem;">
@@ -294,7 +377,6 @@
         </button>
       </div>
 
-      <!-- Cover image -->
       <div class="admin-card">
         <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:1rem;">Cover Image</h3>
         {% if post and post.cover_image %}
@@ -310,14 +392,12 @@
         <div id="coverPreview" class="img-preview"></div>
       </div>
 
-      <!-- Tags -->
       <div class="admin-card">
         <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:1rem;">Tags</h3>
         <input type="text" name="tags" class="form-input"
                value="{{ post.tags if post else '' }}"
                placeholder="law, youth, justice" />
-        <p class="form-hint" style="margin-top:0.4rem;">Comma-separated. E.g: law, rights, opinion</p>
-        <!-- Quick tag chips -->
+        <p class="form-hint" style="margin-top:0.4rem;">Comma-separated</p>
         <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.75rem;">
           {% for t in ['Law','Youth','Justice','Opinion','Research','Rights','Politics','Society'] %}
           <button type="button" class="badge badge-gray" onclick="addTag('{{ t }}')" style="cursor:pointer; font-size:0.72rem;">+ {{ t }}</button>
@@ -325,157 +405,263 @@
         </div>
       </div>
 
-      <!-- Reading time estimate -->
       <div class="admin-card">
         <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:0.5rem;">Reading Time</h3>
         <div id="readingTimeEstimate" style="font-size:1.1rem; font-weight:700; color:var(--accent);">— min</div>
         <p style="font-size:0.78rem; color:var(--text-3); margin-top:0.25rem;">~200 words/minute</p>
       </div>
 
+      <div class="admin-card">
+        <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:0.75rem;">Article outline</h3>
+        <p style="font-size:0.75rem; color:var(--text-3); margin-bottom:0.75rem;">From headings in the active tab.</p>
+        <div id="outlineBox" style="min-height:2rem;"></div>
+      </div>
     </div>
   </div>
 </form>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.js"></script>
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script>
-function initEditor(id, placeholder) {
-  const el = document.getElementById(id);
-  if (!el) return null;
+var quillEn, quillSw;
 
-  const mde = new EasyMDE({
-    element: el,
-    placeholder: placeholder,
-    spellChecker: false,
-    autosave: {
-      enabled: true,
-      uniqueId: 'counsel_craft_' + id,
-      delay: 3000
-    },
-    minHeight: '520px',
-    maxHeight: '800px',
-    toolbar: [
-      { name: 'bold', action: EasyMDE.toggleBold, className: 'fa fa-bold', title: 'Bold (Ctrl+B)' },
-      { name: 'italic', action: EasyMDE.toggleItalic, className: 'fa fa-italic', title: 'Italic (Ctrl+I)' },
-      { name: 'strikethrough', action: EasyMDE.toggleStrikethrough, className: 'fa fa-strikethrough', title: 'Strikethrough' },
-      '|',
-      { name: 'heading-1', action: EasyMDE.toggleHeading1, className: 'fa fa-header fa-heading-1', title: 'Heading 1' },
-      { name: 'heading-2', action: EasyMDE.toggleHeading2, className: 'fa fa-header fa-heading-2', title: 'Heading 2' },
-      { name: 'heading-3', action: EasyMDE.toggleHeading3, className: 'fa fa-header fa-heading-3', title: 'Heading 3' },
-      '|',
-      { name: 'quote', action: EasyMDE.toggleBlockquote, className: 'fa fa-quote-left', title: 'Blockquote' },
-      { name: 'unordered-list', action: EasyMDE.toggleUnorderedList, className: 'fa fa-list-ul', title: 'Bullet List' },
-      { name: 'ordered-list', action: EasyMDE.toggleOrderedList, className: 'fa fa-list-ol', title: 'Numbered List' },
-      '|',
-      { name: 'link', action: EasyMDE.drawLink, className: 'fa fa-link', title: 'Insert Link' },
-      { name: 'image', action: EasyMDE.drawImage, className: 'fa fa-image', title: 'Insert Image URL' },
-      {
-        name: 'upload-image',
-        action: function(editor) { uploadImageFromToolbar(editor); },
-        className: 'fa fa-upload',
-        title: 'Upload Image from Computer'
-      },
-      { name: 'table', action: EasyMDE.drawTable, className: 'fa fa-table', title: 'Insert Table' },
-      { name: 'horizontal-rule', action: EasyMDE.drawHorizontalRule, className: 'fa fa-minus', title: 'Horizontal Rule' },
-      '|',
-      { name: 'code', action: EasyMDE.toggleCodeBlock, className: 'fa fa-code', title: 'Code Block' },
-      { name: 'clean-block', action: EasyMDE.cleanBlock, className: 'fa fa-eraser', title: 'Clean Block' },
-      '|',
-      { name: 'preview', action: EasyMDE.togglePreview, className: 'fa fa-eye no-disable', title: 'Preview (Ctrl+P)' },
-      { name: 'side-by-side', action: EasyMDE.toggleSideBySide, className: 'fa fa-columns no-disable no-mobile', title: 'Side by Side' },
-      { name: 'fullscreen', action: EasyMDE.toggleFullScreen, className: 'fa fa-arrows-alt no-disable no-mobile', title: 'Fullscreen' },
-      '|',
-      { name: 'guide', action: 'https://www.markdownguide.org/basic-syntax/', className: 'fa fa-question-circle', title: 'Markdown Guide' }
-    ],
-    lineWrapping: true,
-    tabSize: 2,
-    indentWithTabs: false,
-    renderingConfig: {
-      singleLineBreaks: false,
-      codeSyntaxHighlighting: false,
-    }
-  });
+var toolbarOptions = [
+  [{ header: [1, 2, 3, false] }],
+  ['bold', 'italic', 'underline', 'strike'],
+  ['blockquote', 'code-block'],
+  ['link', 'image'],
+  [{ list: 'ordered' }, { list: 'bullet' }],
+  ['clean'],
+];
 
-  mde.codemirror.on('change', updateReadingTime);
-  return mde;
-}
-
-function uploadImageFromToolbar(editor) {
-  const input = document.createElement('input');
+function imageHandler(quill) {
+  var input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.onchange = async function() {
-    const file = input.files[0];
+  input.onchange = function() {
+    var file = input.files[0];
     if (!file) return;
-    const fd = new FormData();
+    var fd = new FormData();
     fd.append('file', file);
-    try {
-      const res = await fetch('/admin/upload-image', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.url) {
-        const cm = editor.codemirror;
-        cm.replaceSelection(`![${file.name}](${data.url})`);
-      } else {
-        alert('Upload failed: ' + (data.error || 'unknown error'));
-      }
-    } catch(e) {
-      alert('Upload failed. Check your connection.');
-    }
+    fetch('/admin/upload-image', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.url) {
+          alert(data.error || 'Upload failed');
+          return;
+        }
+        var range = quill.getSelection(true) || { index: quill.getLength() };
+        quill.insertEmbed(range.index, 'image', data.url, 'user');
+        quill.setSelection(range.index + 1);
+      })
+      .catch(function() { alert('Upload failed.'); });
   };
   input.click();
 }
 
-let editorEn, editorFr;
-document.addEventListener('DOMContentLoaded', function() {
-  editorEn = initEditor('editor_en', 'Write your essay here... Markdown is fully supported.\n\n# Start with a heading\n\nThen write your thoughts. Use **bold**, *italic*, > blockquotes...');
-  editorFr = initEditor('editor_fr', 'Rédigez votre essai ici... Markdown supporté.\n\n# Commencez avec un titre\n\nÉcrivez vos idées. Utilisez **gras**, *italique*, > citations...');
-
-  document.getElementById('postForm').addEventListener('submit', function() {
-    if (editorEn) document.getElementById('editor_en').value = editorEn.value();
-    if (editorFr) document.getElementById('editor_fr').value = editorFr.value();
+function initQuill(containerId, placeholder) {
+  var q = new Quill('#' + containerId, {
+    theme: 'snow',
+    placeholder: placeholder,
+    modules: {
+      toolbar: {
+        container: toolbarOptions,
+        handlers: {
+          image: function() { imageHandler(q); },
+        },
+      },
+    },
   });
+  return q;
+}
 
-  updateReadingTime();
-});
+function parseSeed(id) {
+  var el = document.getElementById(id);
+  if (!el) return '';
+  try {
+    return JSON.parse(el.textContent) || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function getActiveQuill() {
+  var enTab = document.getElementById('tab-en');
+  return enTab && enTab.classList.contains('active') ? quillEn : quillSw;
+}
+
+function syncBodies() {
+  if (quillEn) document.getElementById('body_en_field').value = quillEn.root.innerHTML;
+  if (quillSw) document.getElementById('body_fr_field').value = quillSw.root.innerHTML;
+}
+
+function htmlToPlain(html) {
+  var d = document.createElement('div');
+  d.innerHTML = html || '';
+  return d.textContent || d.innerText || '';
+}
 
 function updateReadingTime() {
-  const text = editorEn ? editorEn.value() : (document.getElementById('editor_en')?.value || '');
-  const words = (text.match(/\w+/g) || []).length;
-  const minutes = Math.max(1, Math.ceil(words / 200));
-  const el = document.getElementById('readingTimeEstimate');
-  if (el) el.textContent = `~${minutes} min`;
+  var q = getActiveQuill();
+  var plain = q ? htmlToPlain(q.root.innerHTML) : '';
+  var words = (plain.match(/\w+/g) || []).length;
+  var minutes = Math.max(1, Math.ceil(words / 200));
+  var el = document.getElementById('readingTimeEstimate');
+  if (el) el.textContent = '~' + minutes + ' min';
+}
+
+function updateOutline() {
+  var el = document.getElementById('outlineBox');
+  if (!el) return;
+  var q = getActiveQuill();
+  if (!q) return;
+  var root = q.root;
+  var heads = root.querySelectorAll('h1, h2, h3');
+  if (!heads.length) {
+    el.innerHTML = '<span style="color:var(--text-3);font-size:0.85rem;">No headings yet — use the heading menu in the toolbar.</span>';
+    return;
+  }
+  var parts = [];
+  heads.forEach(function(h) {
+    var level = parseInt(h.tagName.slice(1), 10);
+    var cls = level === 1 ? 'outline-preview-h1' : level === 2 ? 'outline-preview-h2' : 'outline-preview-h3';
+    var text = (h.textContent || '').trim();
+    parts.push('<div class="outline-preview-item ' + cls + '">' + escapeHtml(text) + '</div>');
+  });
+  el.innerHTML = parts.join('');
+}
+
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function insertBlock(kind) {
+  var q = getActiveQuill();
+  if (!q) return;
+  var html = {
+    section: '<h2>New section</h2><p>Write your content here…</p>',
+    quote: '<blockquote><p>Important idea here…</p></blockquote>',
+    example: '<p><strong>Example:</strong> Explain clearly…</p>',
+  }[kind];
+  var range = q.getSelection(true);
+  var idx = range ? range.index : q.getLength();
+  q.clipboard.dangerouslyPasteHTML(idx, html);
+  syncBodies();
+  updateReadingTime();
+  updateOutline();
+}
+
+function setAiLoading(on) {
+  document.querySelectorAll('.writing-tool-btn[data-ai]').forEach(function(b) {
+    b.disabled = on;
+  });
+}
+
+function runAi(action) {
+  var q = getActiveQuill();
+  if (!q) return;
+  var content = q.root.innerHTML;
+  setAiLoading(true);
+  fetch('/admin/ai/writing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: content, action: action }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      setAiLoading(false);
+      if (data.ok && data.result) {
+        q.root.innerHTML = data.result;
+        syncBodies();
+        updateReadingTime();
+        updateOutline();
+      } else {
+        alert(data.error || 'AI is not available.');
+      }
+    })
+    .catch(function() {
+      setAiLoading(false);
+      alert('Request failed. Check your connection.');
+    });
 }
 
 function switchTab(lang, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  syncBodies();
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
   btn.classList.add('active');
   document.getElementById('tab-' + lang).classList.add('active');
-  setTimeout(() => {
-    if (lang === 'en' && editorEn) editorEn.codemirror.refresh();
-    if (lang === 'fr' && editorFr) editorFr.codemirror.refresh();
+  setTimeout(function() {
+    updateReadingTime();
+    updateOutline();
   }, 50);
 }
 
 function previewCover(input) {
-  const preview = document.getElementById('coverPreview');
+  var preview = document.getElementById('coverPreview');
   if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      preview.innerHTML = `<img src="${e.target.result}" style="width:100%;border-radius:8px;border:1px solid rgba(212,175,95,0.3);margin-top:0.75rem;" />`;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      preview.innerHTML = '<img src="' + e.target.result + '" style="width:100%;border-radius:8px;border:1px solid rgba(212,175,95,0.3);margin-top:0.75rem;" alt="" />';
     };
     reader.readAsDataURL(input.files[0]);
   }
 }
 
 function addTag(tag) {
-  const input = document.querySelector('input[name="tags"]');
-  const current = input.value.split(',').map(t => t.trim()).filter(t => t);
-  if (!current.includes(tag)) {
+  var input = document.querySelector('input[name="tags"]');
+  var current = input.value.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+  if (current.indexOf(tag) === -1) {
     current.push(tag);
     input.value = current.join(', ');
   }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  quillEn = initQuill('quill_en', 'Start writing… Use the toolbar for headings, bold, lists, links, and images.');
+  quillSw = initQuill('quill_sw', 'Andika hapa… Tumia upau wa zana hapo juu.');
+
+  var seedEn = parseSeed('seed-body-en');
+  var seedSw = parseSeed('seed-body-sw');
+  if (seedEn) quillEn.root.innerHTML = seedEn;
+  if (seedSw) quillSw.root.innerHTML = seedSw;
+
+  quillEn.on('text-change', function() {
+    syncBodies();
+    if (document.getElementById('tab-en').classList.contains('active')) {
+      updateReadingTime();
+      updateOutline();
+    }
+  });
+  quillSw.on('text-change', function() {
+    syncBodies();
+    if (document.getElementById('tab-sw').classList.contains('active')) {
+      updateReadingTime();
+      updateOutline();
+    }
+  });
+
+  document.getElementById('postForm').addEventListener('submit', function() {
+    syncBodies();
+  }, true);
+
+  document.querySelectorAll('.writing-tool-btn[data-ai]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      runAi(btn.getAttribute('data-ai'));
+    });
+  });
+  document.querySelectorAll('.writing-tool-btn[data-insert]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      insertBlock(btn.getAttribute('data-insert'));
+    });
+  });
+
+  syncBodies();
+  updateReadingTime();
+  updateOutline();
+});
 </script>
 {% endblock %}

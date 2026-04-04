@@ -39,12 +39,12 @@
       </span>
       <span class="post-meta-item">
         <i class="far fa-clock"></i>
-        {{ post.reading_time(lang) }} min {% if lang=='en' %}read{% else %}de lecture{% endif %}
+        {{ post.reading_time(lang) }} {% if lang=='en' %}min read{% else %}dk kusoma{% endif %}
       </span>
       {% if post.updated_at and post.updated_at != post.created_at %}
       <span class="post-meta-item">
         <i class="fas fa-pen"></i>
-        {% if lang=='en' %}Updated{% else %}Mis à jour{% endif %} {{ post.updated_at.strftime('%b %d, %Y') }}
+        {% if lang=='en' %}Updated{% else %}Imesasishwa{% endif %} {{ post.updated_at.strftime('%b %d, %Y') }}
       </span>
       {% endif %}
     </div>
@@ -70,7 +70,7 @@
       {% if lang=='en' %}
         Estimated reading time: <strong style="color:var(--text);">{{ post.reading_time(lang) }} minutes</strong>
       {% else %}
-        Temps de lecture estimé : <strong style="color:var(--text);">{{ post.reading_time(lang) }} minutes</strong>
+        Muda wa kusoma: <strong style="color:var(--text);">{{ post.reading_time(lang) }} dakika</strong>
       {% endif %}
     </span>
   </div>
@@ -97,7 +97,7 @@
   {% if post.tag_list() %}
   <div style="margin-top: 3rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
     <span style="font-size:0.78rem; color:var(--text-3); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-right:0.5rem;">
-      {% if lang=='en' %}Tags{% else %}Étiquettes{% endif %}
+      {% if lang=='en' %}Tags{% else %}Lebo{% endif %}
     </span>
     {% for tag in post.tag_list() %}
     <a href="{{ url_for('blog', tag=tag) }}" class="card-tag" style="text-decoration:none;">{{ tag }}</a>
@@ -105,9 +105,36 @@
   </div>
   {% endif %}
 
+  <!-- Comments -->
+  <section class="comments-section" id="comments" data-post-slug="{{ post.slug }}" data-lang="{{ lang }}">
+    <h2 class="comments-title">{% if lang=='en' %}Comments{% else %}Maoni{% endif %}</h2>
+    <p class="comments-hint">{% if lang=='en' %}Share your thoughts — your name and message will appear after you submit.{% else %}Shiriki mawazo yako — jina na ujumbe wako utaonekana baada ya kutuma.{% endif %}</p>
+
+    {% if comments %}
+    <ul class="comment-list" id="commentList">
+      {% for c in comments %}
+      <li class="comment-item">
+        <div class="comment-meta"><strong>{{ c.author_name }}</strong> · {{ c.created_at.strftime('%b %d, %Y') }}</div>
+        <div class="comment-body">{{ c.body }}</div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <ul class="comment-list" id="commentList"></ul>
+    <p class="comments-hint" id="noCommentsYet" style="margin-bottom:1.5rem;">{% if lang=='en' %}No comments yet — be the first.{% else %}Bado hakuna maoni — kuwa wa kwanza.{% endif %}</p>
+    {% endif %}
+
+    <div class="comment-form-grid">
+      <input type="text" id="commentName" class="comment-input" maxlength="120" placeholder="{% if lang=='en' %}Your name{% else %}Jina lako{% endif %}" autocomplete="name" />
+      <textarea id="commentBody" class="comment-textarea" maxlength="4000" placeholder="{% if lang=='en' %}Write your comment…{% else %}Andika maoni yako…{% endif %}"></textarea>
+      <button type="button" class="comment-submit" id="commentSubmit">{% if lang=='en' %}Post comment{% else %}Tuma maoni{% endif %}</button>
+    </div>
+    <p class="comment-msg" id="commentMsg" style="display:none;"></p>
+  </section>
+
   <!-- Share -->
   <div class="post-share">
-    <span class="post-share-label">{% if lang=='en' %}Share{% else %}Partager{% endif %}</span>
+    <span class="post-share-label">{% if lang=='en' %}Share{% else %}Shiriki{% endif %}</span>
     <button class="share-btn" onclick="sharePost('twitter', '{{ request.url }}', '{{ post.title_en }}')">
       <i class="fab fa-x-twitter"></i> Twitter
     </button>
@@ -117,8 +144,8 @@
     <button class="share-btn" onclick="sharePost('facebook', '{{ request.url }}', '{{ post.title_en }}')">
       <i class="fab fa-facebook-f"></i> Facebook
     </button>
-    <button class="share-btn copy-link-btn" onclick="sharePost('copy', '{{ request.url }}', '{{ post.title_en }}')">
-      🔗 {% if lang=='en' %}Copy link{% else %}Copier le lien{% endif %}
+    <button class="share-btn copy-link-btn" data-copy-done="{% if lang=='en' %}Copied!{% else %}Imenakiliwa!{% endif %}" data-copy-label="{% if lang=='en' %}Copy link{% else %}Nakili kiungo{% endif %}" onclick="sharePost('copy', '{{ request.url }}', '{{ post.title_en }}')">
+      🔗 {% if lang=='en' %}Copy link{% else %}Nakili kiungo{% endif %}
     </button>
   </div>
 
@@ -134,14 +161,14 @@
   ">
     <div style="flex: 1; min-width: 200px;">
       <p style="font-family:var(--font-display); font-size:1.3rem; font-weight:700; margin-bottom:0.5rem;">
-        {% if lang=='en' %}Enjoyed this read?{% else %}Vous avez aimé cet article ?{% endif %}
+        {% if lang=='en' %}Enjoyed this read?{% else %}Umeipenda hii?{% endif %}
       </p>
       <p style="color:var(--text-2); font-size:0.9rem;">
-        {% if lang=='en' %}Get new essays delivered straight to your inbox.{% else %}Recevez de nouveaux essais directement dans votre boîte mail.{% endif %}
+        {% if lang=='en' %}Get new essays delivered straight to your inbox.{% else %}Pata makala mpya moja kwa moja kwenye barua pepe yako.{% endif %}
       </p>
     </div>
     <button onclick="document.getElementById('newsletterModal').classList.add('open')" class="btn-primary">
-      {% if lang=='en' %}Subscribe{% else %}S'abonner{% endif %}
+      {% if lang=='en' %}Subscribe{% else %}Jiunge{% endif %}
     </button>
   </div>
 </div>
@@ -151,7 +178,7 @@
 <section class="related-section">
   <div class="related-inner">
     <h2 class="related-title">
-      {% if lang=='en' %}Continue reading{% else %}Continuer à lire{% endif %}
+      {% if lang=='en' %}Continue reading{% else %}Endelea kusoma{% endif %}
     </h2>
     <div class="related-grid">
       {% for p in related %}
@@ -183,4 +210,76 @@
 </section>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const section = document.getElementById('comments');
+  const btn = document.getElementById('commentSubmit');
+  if (!section || !btn) return;
+
+  const slug = section.dataset.postSlug;
+  const msg = document.getElementById('commentMsg');
+  const list = document.getElementById('commentList');
+  const nameEl = document.getElementById('commentName');
+  const bodyEl = document.getElementById('commentBody');
+  const none = document.getElementById('noCommentsYet');
+
+  btn.addEventListener('click', async function() {
+    const author_name = (nameEl.value || '').trim();
+    const body = (bodyEl.value || '').trim();
+    msg.style.display = 'none';
+
+    if (author_name.length < 2) {
+      msg.textContent = section.dataset.lang === 'sw' ? 'Tafadhali andika jina.' : 'Please enter your name.';
+      msg.className = 'comment-msg err';
+      msg.style.display = 'block';
+      return;
+    }
+    if (body.length < 3) {
+      msg.textContent = section.dataset.lang === 'sw' ? 'Tafadhali andika maoni.' : 'Please write a comment.';
+      msg.className = 'comment-msg err';
+      msg.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    let token = '';
+    const siteKey = document.body.dataset.recaptchaKey;
+    if (siteKey && window.grecaptcha) {
+      try {
+        token = await grecaptcha.execute(siteKey, { action: 'comment' });
+      } catch (e) {}
+    }
+
+    try {
+      const res = await fetch('/blog/' + encodeURIComponent(slug) + '/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author_name, body, recaptcha_token: token })
+      });
+      const data = await res.json();
+      msg.textContent = data.msg;
+      msg.className = 'comment-msg ' + (data.ok ? 'ok' : 'err');
+      msg.style.display = 'block';
+      if (data.ok && data.comment) {
+        bodyEl.value = '';
+        if (none) none.style.display = 'none';
+        const li = document.createElement('li');
+        li.className = 'comment-item';
+        li.innerHTML = '<div class="comment-meta"><strong></strong> · ' + data.comment.created_at + '</div><div class="comment-body"></div>';
+        li.querySelector('strong').textContent = data.comment.author_name;
+        li.querySelector('.comment-body').textContent = data.comment.body;
+        list.appendChild(li);
+      }
+    } catch (e) {
+      msg.textContent = section.dataset.lang === 'sw' ? 'Hitilafu. Jaribu tena.' : 'Something went wrong. Try again.';
+      msg.className = 'comment-msg err';
+      msg.style.display = 'block';
+    }
+    btn.disabled = false;
+  });
+});
+</script>
 {% endblock %}

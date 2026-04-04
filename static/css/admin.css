@@ -253,7 +253,32 @@ img { max-width: 100%; }
   .sidebar-toggle { display: flex; }
   .stat-grid { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
-  .admin-content { padding: 1.5rem 1rem; }
+  .admin-content { padding: 1.25rem 1rem; max-width: 100%; }
+  .admin-header {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    padding: 0.65rem 1rem;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .admin-header-title {
+    flex: 1 1 140px;
+    min-width: 0;
+    font-size: 0.88rem;
+    line-height: 1.3;
+  }
+  .admin-header-actions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+  .admin-header-actions .btn { font-size: 0.8rem; padding: 0.45rem 0.65rem; }
+  .admin-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Flash */

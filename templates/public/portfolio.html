@@ -6,13 +6,13 @@
   <div class="section-inner">
     <div class="section-eyebrow animate-fade-up">Portfolio</div>
     <h1 class="section-title animate-fade-up delay-1" style="font-family:var(--font-display); font-size:clamp(2.5rem,5vw,4.5rem); font-weight:900; letter-spacing:-0.03em; line-height:1.1; margin-bottom:1.5rem;">
-      {% if lang=='en' %}Work & Achievements{% else %}Travaux & Réalisations{% endif %}
+      {% if lang=='en' %}Work & Achievements{% else %}Kazi & Mafanikio{% endif %}
     </h1>
     <p class="animate-fade-up delay-2" style="color:var(--text-2); max-width:560px; font-size:1.05rem; line-height:1.8;">
       {% if lang=='en' %}
         A collection of academic papers, advocacy work, and published pieces that reflect a commitment to justice, youth empowerment, and the law.
       {% else %}
-        Une collection de travaux académiques, d'actions militantes et de publications reflétant un engagement pour la justice et la jeunesse.
+        Mkusanyiko wa kazi za kitaaluma, ulinzi, na machapisho yanayoonyesha kujitolea kwa haki na vijana.
       {% endif %}
     </p>
   </div>
@@ -24,12 +24,12 @@
     <!-- Sample portfolio items — admin can update via settings or future portfolio model -->
     <div class="portfolio-grid">
       {% for item in [
-        ('📜', 'Academic Research', 'Recherche Académique', 'Constitutional Law & Youth Rights', 'Droit Constitutionnel & Droits de la Jeunesse', 'Exploring the intersection of constitutional protections and the legal status of youth in modern democratic systems.', 'Explorer l\'intersection des protections constitutionnelles et du statut juridique des jeunes.', '2024'),
-        ('✍', 'Published Essay', 'Essai Publié', 'The Pen and the Gavel', 'La Plume et le Marteau', 'A meditation on how writing shapes legal thought and how legal thought shapes our world. Published in the student law review.', 'Une méditation sur comment l\'écriture façonne la pensée juridique.', '2024'),
-        ('🏛', 'Moot Court', 'Plaidoirie', 'Regional Moot Court Competition', 'Concours Régional de Plaidoirie', 'Represented the law faculty in regional competition. Argued a landmark case on digital privacy rights for minors.', 'Représenté la faculté de droit. Plaidé sur la vie privée numérique des mineurs.', '2023'),
-        ('✊', 'Advocacy', 'Militantisme', 'Youth Legal Aid Initiative', 'Initiative d\'Aide Juridique Jeunesse', 'Co-founded a campus initiative providing basic legal information to underprivileged youth in the community.', 'Co-fondé une initiative campus d\'information juridique pour les jeunes défavorisés.', '2023'),
-        ('🎤', 'Speaking', 'Conférence', 'TEDx Campus Talk', 'Conférence TEDx Campus', 'Delivered a talk on "Why Young People Should Care About the Law" to an audience of 300+ students.', 'Conférence sur "Pourquoi les jeunes doivent s\'intéresser au droit"', '2023'),
-        ('📰', 'Op-Ed', 'Tribune', 'National Youth Justice Op-Ed', 'Tribune Nationale sur la Justice Jeunesse', 'Published opinion piece arguing for reform of juvenile justice systems in the national student newspaper.', 'Tribune publiée pour la réforme de la justice des mineurs dans le journal étudiant national.', '2022'),
+        ('📜', 'Academic Research', 'Utafiti wa Kitaaluma', 'Constitutional Law & Youth Rights', 'Sheria ya Katiba & Haki za Vijana', 'Exploring the intersection of constitutional protections and the legal status of youth in modern democratic systems.', 'Kuchunguza jinsi ulinzi wa katiba unavyokutana na hali ya kisheria ya vijana katika mifumo ya kidemokrasia ya kisasa.', '2024'),
+        ('✍', 'Published Essay', 'Makala Iliyochapishwa', 'The Pen and the Gavel', 'Kalamu na Nyundo', 'A meditation on how writing shapes legal thought and how legal thought shapes our world. Published in the student law review.', 'Tafakari juu ya jinsi uandishi unavyounda mawazo ya kisheria na jinsi mawazo hayo yanavyounda ulimwengu wetu.', '2024'),
+        ('🏛', 'Moot Court', 'Mahakama ya Mazoezi', 'Regional Moot Court Competition', 'Mashindano ya Kanda ya Mahakama ya Mazoezi', 'Represented the law faculty in regional competition. Argued a landmark case on digital privacy rights for minors.', 'Kuwakilisha chuo cha sheria katika mashindano ya kanda. Kujadili kesi muhimu kuhusu faragha ya kidijitali kwa walio chini ya miaka.', '2023'),
+        ('✊', 'Advocacy', 'Ulinzi', 'Youth Legal Aid Initiative', 'Mpango wa Msaada wa Kisheria kwa Vijana', 'Co-founded a campus initiative providing basic legal information to underprivileged youth in the community.', 'Kuunda pamoja mpango wa chuo unaotoa taarifa za msingi za kisheria kwa vijana walio katika hali ngumu.', '2023'),
+        ('🎤', 'Speaking', 'Hotuba', 'TEDx Campus Talk', 'Hotuba ya TEDx Chuo', 'Delivered a talk on "Why Young People Should Care About the Law" to an audience of 300+ students.', 'Kutoa hotuba kuhusu "Kwa nini vijana wapaswa kujali sheria" kwa wasikilizaji zaidi ya 300.', '2023'),
+        ('📰', 'Op-Ed', 'Maoni', 'National Youth Justice Op-Ed', 'Maoni ya Kitaifa kuhusu Haki kwa Vijana', 'Published opinion piece arguing for reform of juvenile justice systems in the national student newspaper.', 'Makala ya maoni iliyochapishwa inayopendekeza mabadiliko katika mifumo ya haki kwa vijana kwenye gazeti la wanafunzi.', '2022'),
       ] %}
       <div class="portfolio-item reveal">
         <div class="portfolio-icon">{{ item[0] }}</div>
@@ -46,11 +46,11 @@
     {% if settings.cv %}
     <div class="reveal" style="text-align:center; margin-top: 4rem;">
       <p style="color:var(--text-2); margin-bottom:1.5rem;">
-        {% if lang=='en' %}Want the full picture?{% else %}Vous voulez en savoir plus ?{% endif %}
+        {% if lang=='en' %}Want the full picture?{% else %}Unataka picha kamili?{% endif %}
       </p>
       <a href="{{ settings.cv|asset }}" class="btn-primary" download>
         <i class="fas fa-file-pdf"></i>
-        {% if lang=='en' %}Download Full CV{% else %}Télécharger le CV complet{% endif %}
+        {% if lang=='en' %}Download Full CV{% else %}Pakua CV kamili{% endif %}
       </a>
     </div>
     {% endif %}

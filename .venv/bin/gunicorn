@@ -1,4 +1,4 @@
-#!/home/josiamosses/Desktop/website/.venv/bin/python3
+#!/home/josiamosses/Desktop/lawblog/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

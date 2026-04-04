@@ -149,7 +149,13 @@ function sharePost(platform, url, title) {
   if (platform === 'copy') {
     navigator.clipboard.writeText(url).then(() => {
       const btn = document.querySelector('.copy-link-btn');
-      if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => { btn.textContent = '🔗 Copy link'; }, 2000); }
+      if (btn) {
+        const done = btn.dataset.copyDone || '✓ Copied!';
+        const label = btn.dataset.copyLabel || 'Copy link';
+        const orig = '🔗 ' + label;
+        btn.textContent = done;
+        setTimeout(() => { btn.textContent = orig; }, 2200);
+      }
     });
     return;
   }
