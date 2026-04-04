@@ -1,0 +1,129 @@
+{% extends "admin/base.html" %}
+{% block title %}Site Settings{% endblock %}
+{% block page_title %}Site Settings{% endblock %}
+
+{% block content %}
+<form method="POST" enctype="multipart/form-data">
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+
+    <!-- Identity -->
+    <div class="admin-card" style="grid-column: 1 / -1;">
+      <h3 style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:1.5rem;">🪪 Identity</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Site / Your Name</label>
+          <input type="text" name="name" class="form-input" value="{{ settings.name }}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-input" value="{{ settings.email }}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tagline (English)</label>
+          <input type="text" name="tagline_en" class="form-input" value="{{ settings.tagline_en }}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tagline (Français)</label>
+          <input type="text" name="tagline_fr" class="form-input" value="{{ settings.tagline_fr }}" />
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:1rem;">
+        <div class="form-group">
+          <label class="form-label">Bio (English)</label>
+          <textarea name="bio_en" class="form-textarea" rows="4">{{ settings.bio_en }}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bio (Français)</label>
+          <textarea name="bio_fr" class="form-textarea" rows="4">{{ settings.bio_fr }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero quote -->
+    <div class="admin-card" style="grid-column: 1 / -1;">
+      <h3 style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:1.5rem;">💬 Hero Quote</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Quote (English)</label>
+          <textarea name="hero_quote_en" class="form-textarea" rows="3">{{ settings.hero_quote_en }}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quote (Français)</label>
+          <textarea name="hero_quote_fr" class="form-textarea" rows="3">{{ settings.hero_quote_fr }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Social -->
+    <div class="admin-card">
+      <h3 style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:1.5rem;">🔗 Social Links</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label"><i class="fab fa-x-twitter" style="color:var(--accent);"></i> Twitter/X URL</label>
+          <input type="url" name="twitter" class="form-input" value="{{ settings.twitter }}" placeholder="https://twitter.com/..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label"><i class="fab fa-linkedin-in" style="color:var(--accent);"></i> LinkedIn URL</label>
+          <input type="url" name="linkedin" class="form-input" value="{{ settings.linkedin }}" placeholder="https://linkedin.com/in/..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label"><i class="fab fa-instagram" style="color:var(--accent);"></i> Instagram URL</label>
+          <input type="url" name="instagram" class="form-input" value="{{ settings.instagram }}" placeholder="https://instagram.com/..." />
+        </div>
+      </div>
+    </div>
+
+    <!-- Files -->
+    <div class="admin-card">
+      <h3 style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:1.5rem;">📁 Files & Media</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Logo</label>
+          {% if settings.logo %}
+          <div style="margin-bottom:0.5rem;"><img src="{{ settings.logo|asset }}" style="max-height:50px;border-radius:6px;" /></div>
+          {% endif %}
+          <label class="file-upload-zone">
+            <input type="file" name="logo" accept="image/*" />
+            <i class="fas fa-image" style="margin-bottom:0.25rem;"></i>
+            <span style="font-size:0.8rem;">Upload logo</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Profile Photo / Avatar</label>
+          {% if settings.avatar %}
+          <div style="margin-bottom:0.5rem;"><img src="{{ settings.avatar|asset }}" style="max-height:60px;border-radius:50%;border:2px solid var(--border-accent);" /></div>
+          {% endif %}
+          <label class="file-upload-zone">
+            <input type="file" name="avatar" accept="image/*" />
+            <i class="fas fa-user-circle" style="margin-bottom:0.25rem;"></i>
+            <span style="font-size:0.8rem;">Upload profile photo</span>
+          </label>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">CV / Resume (PDF)</label>
+          {% if settings.cv %}
+          <div style="margin-bottom:0.5rem;">
+            <a href="{{ settings.cv|asset }}" target="_blank" class="badge badge-green">
+              <i class="fas fa-file-pdf"></i> Current CV — click to view
+            </a>
+          </div>
+          {% endif %}
+          <label class="file-upload-zone">
+            <input type="file" name="cv" accept=".pdf" />
+            <i class="fas fa-file-pdf" style="margin-bottom:0.25rem;"></i>
+            <span style="font-size:0.8rem;">Upload CV (PDF only, max 16MB)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex; justify-content:flex-end; gap:1rem;">
+    <button type="submit" class="btn btn-gold" style="padding:0.8rem 2.5rem; font-size:1rem;">
+      <i class="fas fa-save"></i> Save All Settings
+    </button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Admin{% endblock %} — Counsel & Craft</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-logo">
+      <span class="sidebar-logo-icon">⚖</span>
+      <div>
+        <div class="sidebar-logo-name">Admin Panel</div>
+        <div class="sidebar-logo-sub">Counsel & Craft</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link {% if request.endpoint=='admin_dashboard' %}active{% endif %}">
+        <i class="fas fa-chart-bar"></i> Dashboard
+      </a>
+      <a href="{{ url_for('admin_posts') }}" class="sidebar-link {% if request.endpoint in ('admin_posts','admin_new_post','admin_edit_post') %}active{% endif %}">
+        <i class="fas fa-pen-nib"></i> Blog Posts
+      </a>
+      <a href="{{ url_for('admin_subscribers') }}" class="sidebar-link {% if request.endpoint=='admin_subscribers' %}active{% endif %}">
+        <i class="fas fa-envelope"></i> Subscribers
+      </a>
+      <a href="{{ url_for('admin_settings') }}" class="sidebar-link {% if request.endpoint=='admin_settings' %}active{% endif %}">
+        <i class="fas fa-cog"></i> Site Settings
+      </a>
+      <div class="sidebar-divider"></div>
+      <a href="{{ url_for('index') }}" class="sidebar-link" target="_blank">
+        <i class="fas fa-external-link-alt"></i> View Site
+      </a>
+      <a href="{{ url_for('admin_logout') }}" class="sidebar-link sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">{{ current_user.email[0].upper() }}</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">Administrator</div>
+        <div class="sidebar-user-email">{{ current_user.email }}</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="admin-main">
+    <header class="admin-header">
+      <button class="sidebar-toggle" id="sidebarToggle" onclick="document.getElementById('adminSidebar').classList.toggle('open')">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="admin-header-title">{% block page_title %}{% endblock %}</div>
+      <div class="admin-header-actions">{% block header_actions %}{% endblock %}</div>
+    </header>
+
+    <div class="admin-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div style="margin-bottom:1.5rem;">
+            {% for cat, msg in messages %}
+              <div class="flash flash-{{ cat }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% else %}
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

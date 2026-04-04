@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% block title %}Blog Posts{% endblock %}
+{% block page_title %}Blog Posts{% endblock %}
+{% block header_actions %}
+<a href="{{ url_for('admin_new_post') }}" class="btn btn-gold btn-sm"><i class="fas fa-plus"></i> New Post</a>
+{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+  {% if posts %}
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th>Reading</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in posts %}
+      <tr>
+        <td>
+          <div style="font-weight:600;margin-bottom:0.2rem;">{{ p.title_en | truncate(60) }}</div>
+          {% if p.tag_list() %}
+          <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
+            {% for tag in p.tag_list()[:3] %}<span class="badge badge-gold" style="font-size:0.65rem;">{{ tag }}</span>{% endfor %}
+          </div>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+            <span class="badge {{ 'badge-green' if p.published else 'badge-gray' }}" id="badge-{{ p.id }}">
+              {{ 'Published' if p.published else 'Draft' }}
+            </span>
+            {% if p.featured %}<span class="badge badge-gold">⭐ Featured</span>{% endif %}
+          </div>
+        </td>
+        <td style="color:var(--text-3);font-size:0.85rem;">{{ p.created_at.strftime('%b %d, %Y') }}</td>
+        <td style="color:var(--text-3);font-size:0.85rem;">{{ p.reading_time() }} min</td>
+        <td>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <label class="toggle-switch" title="{{ 'Unpublish' if p.published else 'Publish' }}">
+              <input type="checkbox" {{ 'checked' if p.published else '' }} onchange="togglePost({{ p.id }}, this)" />
+              <span class="toggle-slider"></span>
+            </label>
+            <a href="{{ url_for('admin_edit_post', post_id=p.id) }}" class="btn btn-outline btn-sm">
+              <i class="fas fa-edit"></i>
+            </a>
+            {% if p.published %}
+            <a href="{{ url_for('post', slug=p.slug) }}" class="btn btn-outline btn-sm" target="_blank">
+              <i class="fas fa-eye"></i>
+            </a>
+            {% endif %}
+            <form method="POST" action="{{ url_for('admin_delete_post', post_id=p.id) }}" onsubmit="return confirm('Delete this post?');" style="display:inline;">
+              <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:4rem;color:var(--text-3);">
+    <div style="font-size:3rem;margin-bottom:1rem;">✍</div>
+    <p>No posts yet. <a href="{{ url_for('admin_new_post') }}" style="color:var(--accent);">Write your first post</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function togglePost(id, checkbox) {
+  const res = await fetch(`/admin/posts/${id}/toggle`, { method: 'POST' });
+  const data = await res.json();
+  const badge = document.getElementById(`badge-${id}`);
+  if (badge) {
+    badge.textContent = data.published ? 'Published' : 'Draft';
+    badge.className = 'badge ' + (data.published ? 'badge-green' : 'badge-gray');
+  }
+  checkbox.checked = data.published;
+}
+</script>
+{% endblock %}

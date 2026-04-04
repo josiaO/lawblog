@@ -1,0 +1,74 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin_new_post') }}" class="btn btn-gold btn-sm">
+  <i class="fas fa-plus"></i> New Post
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-icon">📝</div>
+    <div class="stat-value">{{ total_posts }}</div>
+    <div class="stat-label">Total Posts</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🌐</div>
+    <div class="stat-value">{{ published_posts }}</div>
+    <div class="stat-label">Published</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">📬</div>
+    <div class="stat-value">{{ subscribers }}</div>
+    <div class="stat-label">Subscribers</div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+  <div class="admin-card">
+    <h3 style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:1rem;">Recent Posts</h3>
+    {% for p in recent_posts %}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:0.9rem;font-weight:500;">{{ p.title_en | truncate(45) }}</div>
+        <div style="font-size:0.75rem;color:var(--text-3);">{{ p.created_at.strftime('%b %d, %Y') }}</div>
+      </div>
+      <span class="badge {{ 'badge-green' if p.published else 'badge-gray' }}">{{ 'Live' if p.published else 'Draft' }}</span>
+    </div>
+    {% endfor %}
+    <a href="{{ url_for('admin_posts') }}" style="display:block;margin-top:1rem;font-size:0.85rem;color:var(--accent);">View all →</a>
+  </div>
+  <div class="admin-card">
+    <h3 style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:1rem;">Recent Subscribers</h3>
+    {% for s in recent_subs %}
+    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-glow);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">{{ s.email[0].upper() }}</div>
+      <div>
+        <div style="font-size:0.88rem;">{{ s.email }}</div>
+        <div style="font-size:0.72rem;color:var(--text-3);">{{ s.subscribed_at.strftime('%b %d') }}</div>
+      </div>
+    </div>
+    {% else %}
+    <p style="color:var(--text-3);font-size:0.88rem;">No subscribers yet.</p>
+    {% endfor %}
+    <a href="{{ url_for('admin_subscribers') }}" style="display:block;margin-top:1rem;font-size:0.85rem;color:var(--accent);">View all →</a>
+  </div>
+</div>
+
+<div class="admin-card" style="margin-top:1.5rem; background: linear-gradient(135deg, var(--bg-card), var(--bg-3));">
+  <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+    <div style="font-size:2.5rem;">🚀</div>
+    <div>
+      <h3 style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;margin-bottom:0.25rem;">Welcome to your admin panel</h3>
+      <p style="color:var(--text-2);font-size:0.9rem;">Configure your site settings, write blog posts, and grow your audience.</p>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:0.75rem;flex-wrap:wrap;">
+      <a href="{{ url_for('admin_settings') }}" class="btn btn-outline btn-sm"><i class="fas fa-cog"></i> Settings</a>
+      <a href="{{ url_for('admin_new_post') }}" class="btn btn-gold btn-sm"><i class="fas fa-pen"></i> Write</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "public/base.html" %}
+{% block title %}{{ post.title_en if lang=='en' else (post.title_fr or post.title_en) }} — {{ settings.name }}{% endblock %}
+{% block desc %}{{ post.excerpt_en if lang=='en' else (post.excerpt_fr or post.excerpt_en) }}{% endblock %}
+
+{% block content %}
+
+<!-- Reading progress -->
+<div class="reading-progress">
+  <div class="reading-progress-bar" id="readingBar"></div>
+</div>
+
+<!-- Post hero -->
+<div class="post-hero">
+  {% if post.cover_image %}
+  <div class="post-hero-bg">
+    <img src="{{ post.cover_image|asset }}" alt="" />
+  </div>
+  {% else %}
+  <div class="post-hero-fallback"></div>
+  {% endif %}
+
+  <div class="post-hero-content">
+    {% if post.tag_list() %}
+    <div class="post-hero-tags">
+      {% for tag in post.tag_list() %}
+      <a href="{{ url_for('blog', tag=tag) }}" class="post-hero-tag">{{ tag }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h1 class="post-hero-title animate-fade-up">
+      {{ post.title_en if lang=='en' else (post.title_fr or post.title_en) }}
+    </h1>
+
+    <div class="post-meta animate-fade-up delay-1">
+      <span class="post-meta-item">
+        <i class="far fa-calendar-alt"></i>
+        {{ post.created_at.strftime('%B %d, %Y') }}
+      </span>
+      <span class="post-meta-item">
+        <i class="far fa-clock"></i>
+        {{ post.reading_time(lang) }} min {% if lang=='en' %}read{% else %}de lecture{% endif %}
+      </span>
+      {% if post.updated_at and post.updated_at != post.created_at %}
+      <span class="post-meta-item">
+        <i class="fas fa-pen"></i>
+        {% if lang=='en' %}Updated{% else %}Mis à jour{% endif %} {{ post.updated_at.strftime('%b %d, %Y') }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Post body -->
+<div class="post-body-wrap">
+
+  <!-- Reading time badge (sticky) -->
+  <div style="
+    display:flex; align-items:center; gap:0.75rem;
+    margin-bottom: 3rem;
+    padding: 0.9rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    width: fit-content;
+    font-size: 0.85rem; color: var(--text-2);
+  ">
+    <span style="color:var(--accent);">⏱</span>
+    <span>
+      {% if lang=='en' %}
+        Estimated reading time: <strong style="color:var(--text);">{{ post.reading_time(lang) }} minutes</strong>
+      {% else %}
+        Temps de lecture estimé : <strong style="color:var(--text);">{{ post.reading_time(lang) }} minutes</strong>
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Excerpt / lead -->
+  {% set excerpt = post.excerpt_en if lang=='en' else (post.excerpt_fr or post.excerpt_en) %}
+  {% if excerpt %}
+  <p style="
+    font-family: var(--font-display);
+    font-size: 1.35rem; font-style: italic;
+    color: var(--text-2); line-height: 1.7;
+    margin-bottom: 2.5rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+  ">{{ excerpt }}</p>
+  {% endif %}
+
+  <!-- Main content -->
+  <article class="post-content" id="articleBody">
+    {{ post.rendered_body(lang) | safe }}
+  </article>
+
+  <!-- Tags -->
+  {% if post.tag_list() %}
+  <div style="margin-top: 3rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+    <span style="font-size:0.78rem; color:var(--text-3); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-right:0.5rem;">
+      {% if lang=='en' %}Tags{% else %}Étiquettes{% endif %}
+    </span>
+    {% for tag in post.tag_list() %}
+    <a href="{{ url_for('blog', tag=tag) }}" class="card-tag" style="text-decoration:none;">{{ tag }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Share -->
+  <div class="post-share">
+    <span class="post-share-label">{% if lang=='en' %}Share{% else %}Partager{% endif %}</span>
+    <button class="share-btn" onclick="sharePost('twitter', '{{ request.url }}', '{{ post.title_en }}')">
+      <i class="fab fa-x-twitter"></i> Twitter
+    </button>
+    <button class="share-btn" onclick="sharePost('linkedin', '{{ request.url }}', '{{ post.title_en }}')">
+      <i class="fab fa-linkedin-in"></i> LinkedIn
+    </button>
+    <button class="share-btn" onclick="sharePost('facebook', '{{ request.url }}', '{{ post.title_en }}')">
+      <i class="fab fa-facebook-f"></i> Facebook
+    </button>
+    <button class="share-btn copy-link-btn" onclick="sharePost('copy', '{{ request.url }}', '{{ post.title_en }}')">
+      🔗 {% if lang=='en' %}Copy link{% else %}Copier le lien{% endif %}
+    </button>
+  </div>
+
+  <!-- Newsletter nudge -->
+  <div style="
+    margin-top: 4rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-accent);
+    border-radius: 16px;
+    padding: 2.5rem;
+    display: flex; align-items: center; gap: 2rem;
+    flex-wrap: wrap;
+  ">
+    <div style="flex: 1; min-width: 200px;">
+      <p style="font-family:var(--font-display); font-size:1.3rem; font-weight:700; margin-bottom:0.5rem;">
+        {% if lang=='en' %}Enjoyed this read?{% else %}Vous avez aimé cet article ?{% endif %}
+      </p>
+      <p style="color:var(--text-2); font-size:0.9rem;">
+        {% if lang=='en' %}Get new essays delivered straight to your inbox.{% else %}Recevez de nouveaux essais directement dans votre boîte mail.{% endif %}
+      </p>
+    </div>
+    <button onclick="document.getElementById('newsletterModal').classList.add('open')" class="btn-primary">
+      {% if lang=='en' %}Subscribe{% else %}S'abonner{% endif %}
+    </button>
+  </div>
+</div>
+
+<!-- Related posts -->
+{% if related %}
+<section class="related-section">
+  <div class="related-inner">
+    <h2 class="related-title">
+      {% if lang=='en' %}Continue reading{% else %}Continuer à lire{% endif %}
+    </h2>
+    <div class="related-grid">
+      {% for p in related %}
+      <article class="post-card reveal">
+        {% if p.cover_image %}
+        <div class="card-cover">
+          <img src="{{ p.cover_image|asset }}" alt="" loading="lazy" />
+        </div>
+        {% else %}
+        <div class="card-cover-placeholder">✍</div>
+        {% endif %}
+        <div class="card-body">
+          {% if p.tag_list() %}
+          <div class="card-tags">{% for tag in p.tag_list()[:1] %}<span class="card-tag">{{ tag }}</span>{% endfor %}</div>
+          {% endif %}
+          <h3 class="card-title">
+            <a href="{{ url_for('post', slug=p.slug) }}">{{ p.title_en if lang=='en' else (p.title_fr or p.title_en) }}</a>
+          </h3>
+          <div class="card-footer">
+            <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
+            <span class="card-reading">{{ p.reading_time(lang) }} min</span>
+            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

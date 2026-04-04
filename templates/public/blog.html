@@ -1,0 +1,91 @@
+{% extends "public/base.html" %}
+{% block title %}Blog — {{ settings.name }}{% endblock %}
+
+{% block content %}
+<div class="blog-header">
+  <div class="section-inner">
+    <div class="blog-hero-title animate-fade-up">
+      {% if lang=='en' %}<span>Essays.</span> Ideas. <span>Law.</span>{% else %}<span>Essais.</span> Idées. <span>Droit.</span>{% endif %}
+    </div>
+    <p class="animate-fade-up delay-1" style="color:var(--text-2); max-width:480px; margin: 1.5rem auto 0; font-size:1.05rem;">
+      {% if lang=='en' %}Thoughts on law, justice, youth, and the written word.{% else %}Réflexions sur le droit, la justice, la jeunesse et les mots.{% endif %}
+    </p>
+
+    {% if all_tags %}
+    <div class="tag-filter animate-fade-up delay-2">
+      <a href="{{ url_for('blog') }}" class="tag-btn {% if not active_tag %}active{% endif %}">
+        {% if lang=='en' %}All{% else %}Tous{% endif %}
+      </a>
+      {% for tag in all_tags %}
+      <a href="{{ url_for('blog', tag=tag) }}" class="tag-btn {% if active_tag==tag %}active{% endif %}">{{ tag }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="section" style="padding-top: 0;">
+  <div class="section-inner">
+    {% if posts.items %}
+    <div class="posts-grid">
+      {% for p in posts.items %}
+      <article class="post-card reveal">
+        {% if p.cover_image %}
+        <div class="card-cover">
+          <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" />
+        </div>
+        {% else %}
+        <div class="card-cover-placeholder">{{ ['⚖','✍','📜','🏛','✊'][loop.index0 % 5] }}</div>
+        {% endif %}
+        <div class="card-body">
+          {% if p.tag_list() %}
+          <div class="card-tags">
+            {% for tag in p.tag_list()[:3] %}<span class="card-tag">{{ tag }}</span>{% endfor %}
+          </div>
+          {% endif %}
+          <h2 class="card-title">
+            <a href="{{ url_for('post', slug=p.slug) }}">
+              {{ p.title_en if lang=='en' else (p.title_fr or p.title_en) }}
+            </a>
+          </h2>
+          <p class="card-excerpt">
+            {{ (p.excerpt_en if lang=='en' else (p.excerpt_fr or p.excerpt_en)) | truncate(140) }}
+          </p>
+          <div class="card-footer">
+            <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
+            <span class="card-reading">{{ p.reading_time(lang) }} min read</span>
+            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if posts.pages > 1 %}
+    <div class="pagination">
+      {% if posts.has_prev %}
+      <a href="{{ url_for('blog', page=posts.prev_num, tag=active_tag) }}" class="page-btn">←</a>
+      {% endif %}
+      {% for p in posts.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+          <a href="{{ url_for('blog', page=p, tag=active_tag) }}" class="page-btn {% if p==posts.page %}active{% endif %}">{{ p }}</a>
+        {% else %}
+          <span class="page-btn" style="border:none; color:var(--text-3);">…</span>
+        {% endif %}
+      {% endfor %}
+      {% if posts.has_next %}
+      <a href="{{ url_for('blog', page=posts.next_num, tag=active_tag) }}" class="page-btn">→</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align:center; padding: 6rem 0; color:var(--text-3);">
+      <div style="font-size:3rem; margin-bottom:1rem;">✍</div>
+      <p>{% if lang=='en' %}No posts yet. Check back soon!{% else %}Aucun article pour le moment.{% endif %}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

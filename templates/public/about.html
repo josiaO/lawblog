@@ -1,0 +1,65 @@
+{% extends "public/base.html" %}
+{% block title %}{% if lang=='en' %}About{% else %}À Propos{% endif %} — {{ settings.name }}{% endblock %}
+
+{% block content %}
+<section class="about-hero reveal">
+  <div>
+    {% if settings.avatar %}
+    <img src="{{ settings.avatar|asset }}" alt="{{ settings.name }}" class="about-avatar-large" />
+    {% else %}
+    <div style="width:200px;height:200px;border-radius:50%;background:var(--bg-3);border:4px solid var(--border-accent);margin:0 auto 2rem;display:flex;align-items:center;justify-content:center;font-size:5rem;">⚖</div>
+    {% endif %}
+    <h1 class="about-name">{{ settings.name }}</h1>
+    <p class="about-role">
+      {% if lang=='en' %}Law Student · Writer · Youth Advocate{% else %}Étudiant en Droit · Écrivain · Voix de la Jeunesse{% endif %}
+    </p>
+  </div>
+</section>
+
+<div class="about-body reveal">
+  <p class="about-bio">{{ settings.bio_en if lang=='en' else settings.bio_fr }}</p>
+
+  <!-- Pillars -->
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 3rem;" class="reveal">
+    {% for icon, title_en, title_fr, desc_en, desc_fr in [
+      ('⚖', 'Law', 'Droit', 'Studying the structures that govern society, seeking justice in every clause.', 'Étudier les structures qui gouvernent la société, chercher la justice dans chaque clause.'),
+      ('✍', 'Writing', 'Écriture', 'Believing words are the most powerful tools for change. Writing as advocacy.', 'Croire que les mots sont les outils les plus puissants du changement. Écrire comme acte militant.'),
+      ('✊', 'Youth', 'Jeunesse', 'Standing up for the generation that will inherit this world. Their voice matters.', 'Défendre la génération qui héritera de ce monde. Leur voix compte.'),
+    ] %}
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:2rem;text-align:center;transition:all 0.3s;" onmouseover="this.style.borderColor='var(--border-accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size:2.5rem;margin-bottom:1rem;">{{ icon }}</div>
+      <h3 style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;margin-bottom:0.6rem;">{{ title_en if lang=='en' else title_fr }}</h3>
+      <p style="font-size:0.88rem;color:var(--text-2);line-height:1.7;">{{ desc_en if lang=='en' else desc_fr }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- CV download -->
+  <div style="text-align:center; margin-bottom: 3rem;" class="reveal">
+    {% if settings.cv %}
+    <a href="{{ settings.cv|asset }}" class="about-cv-btn" download>
+      <i class="fas fa-file-pdf"></i>
+      {% if lang=='en' %}Download CV{% else %}Télécharger le CV{% endif %}
+    </a>
+    {% endif %}
+
+    <div class="footer-links" style="margin-top: 2rem;">
+      {% if settings.email %}<a href="mailto:{{ settings.email }}" class="footer-link" title="Email"><i class="fa fa-envelope"></i></a>{% endif %}
+      {% if settings.twitter %}<a href="{{ settings.twitter }}" class="footer-link" target="_blank" title="Twitter"><i class="fab fa-x-twitter"></i></a>{% endif %}
+      {% if settings.linkedin %}<a href="{{ settings.linkedin }}" class="footer-link" target="_blank" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>{% endif %}
+      {% if settings.instagram %}<a href="{{ settings.instagram }}" class="footer-link" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Recent posts -->
+<section class="section skills-section">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <div class="section-eyebrow">{% if lang=='en' %}Writing{% else %}Écrits{% endif %}</div>
+      <h2 class="section-title">{% if lang=='en' %}Latest from the blog{% else %}Derniers articles{% endif %}</h2>
+    </div>
+    <a href="{{ url_for('blog') }}" class="btn-primary reveal">{% if lang=='en' %}Read all posts{% else %}Lire tous les articles{% endif %} →</a>
+  </div>
+</section>
+{% endblock %}

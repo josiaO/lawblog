@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ settings.name }}{% endblock %}</title>
+  <meta name="description" content="{% block desc %}{{ settings.bio_en if lang=='en' else settings.bio_fr }}{% endblock %}" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- reCAPTCHA -->
+  {% if settings.recaptcha_site_key %}
+  <script src="https://www.google.com/recaptcha/api.js?render={{ settings.recaptcha_site_key }}" async defer></script>
+  {% endif %}
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Cursor glow ── -->
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- ── Navigation ── -->
+<nav class="site-nav" id="siteNav">
+  <div class="nav-inner">
+    <a href="{{ url_for('index') }}" class="nav-logo">
+      {% if settings.logo %}
+        <img src="{{ settings.logo|asset }}" alt="{{ settings.name }}" class="logo-img" />
+      {% else %}
+        <span class="logo-text">{{ settings.name }}</span>
+      {% endif %}
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="{{ url_for('index') }}" {% if request.endpoint=='index' %}class="active"{% endif %}>
+        {% if lang=='en' %}Home{% else %}Accueil{% endif %}
+      </a></li>
+      <li><a href="{{ url_for('about') }}" {% if request.endpoint=='about' %}class="active"{% endif %}>
+        {% if lang=='en' %}About{% else %}À propos{% endif %}
+      </a></li>
+      <li><a href="{{ url_for('blog') }}" {% if request.endpoint in ('blog','post') %}class="active"{% endif %}>
+        {% if lang=='en' %}Blog{% else %}Blog{% endif %}
+      </a></li>
+      <li><a href="{{ url_for('portfolio') }}" {% if request.endpoint=='portfolio' %}class="active"{% endif %}>
+        {% if lang=='en' %}Portfolio{% else %}Portfolio{% endif %}
+      </a></li>
+    </ul>
+
+    <div class="nav-controls">
+      <!-- Language -->
+      <div class="lang-toggle">
+        <a href="{{ url_for('set_lang', lang='en') }}" class="lang-btn {% if lang=='en' %}active{% endif %}">EN</a>
+        <span class="lang-sep">/</span>
+        <a href="{{ url_for('set_lang', lang='fr') }}" class="lang-btn {% if lang=='fr' %}active{% endif %}">FR</a>
+      </div>
+
+      <!-- Theme -->
+      <button class="theme-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+        <span class="theme-icon sun">☀</span>
+        <span class="theme-icon moon">☾</span>
+      </button>
+
+      <!-- Mobile menu -->
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <ul>
+      <li><a href="{{ url_for('index') }}">{% if lang=='en' %}Home{% else %}Accueil{% endif %}</a></li>
+      <li><a href="{{ url_for('about') }}">{% if lang=='en' %}About{% else %}À propos{% endif %}</a></li>
+      <li><a href="{{ url_for('blog') }}">Blog</a></li>
+      <li><a href="{{ url_for('portfolio') }}">Portfolio</a></li>
+    </ul>
+    <div class="mobile-lang">
+      <a href="{{ url_for('set_lang', lang='en') }}" class="{% if lang=='en' %}active{% endif %}">EN</a>
+      <a href="{{ url_for('set_lang', lang='fr') }}" class="{% if lang=='fr' %}active{% endif %}">FR</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Main content ── -->
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for cat, msg in messages %}
+          <div class="flash flash-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<!-- ── Newsletter Modal ── -->
+<div class="modal-overlay" id="newsletterModal" role="dialog" aria-modal="true" aria-label="Newsletter">
+  <div class="modal-box">
+    <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+    <div class="modal-inner">
+      <div class="modal-eyebrow">{{ '📬 Stay in the loop' if lang=='en' else '📬 Restez informé' }}</div>
+      <h2 class="modal-title">
+        {{ 'Words that move, delivered to you.' if lang=='en' else 'Des mots qui bougent, livrés chez vous.' }}
+      </h2>
+      <p class="modal-desc">
+        {{ 'Join the newsletter — essays on law, justice & youth culture. No spam, ever.' if lang=='en' else 'Rejoignez la newsletter — essais sur le droit, la justice et la culture jeune.' }}
+      </p>
+      <div class="newsletter-form" id="newsletterForm">
+        <input type="text" id="subName" placeholder="{{ 'Your name (optional)' if lang=='en' else 'Votre prénom (optionnel)' }}" class="sub-input" />
+        <input type="email" id="subEmail" placeholder="{{ 'your@email.com' }}" class="sub-input" required />
+        <button class="sub-btn" id="subBtn" onclick="submitSubscribe()">
+          {{ 'Subscribe' if lang=='en' else "S'abonner" }}
+        </button>
+      </div>
+      <div class="sub-result" id="subResult" style="display:none;"></div>
+      <p class="modal-fine">{{ 'Powered by Brevo. Unsubscribe anytime.' if lang=='en' else 'Via Brevo. Désabonnez-vous à tout moment.' }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Footer ── -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="footer-name">{{ settings.name }}</span>
+      <p class="footer-tagline">{{ settings.tagline_en if lang=='en' else settings.tagline_fr }}</p>
+    </div>
+
+    <div class="footer-links">
+      {% if settings.email %}
+      <a href="mailto:{{ settings.email }}" class="footer-link" title="Email"><i class="fa fa-envelope"></i></a>
+      {% endif %}
+      {% if settings.twitter %}
+      <a href="{{ settings.twitter }}" class="footer-link" target="_blank" title="Twitter/X"><i class="fab fa-x-twitter"></i></a>
+      {% endif %}
+      {% if settings.linkedin %}
+      <a href="{{ settings.linkedin }}" class="footer-link" target="_blank" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+      {% endif %}
+      {% if settings.instagram %}
+      <a href="{{ settings.instagram }}" class="footer-link" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+      {% endif %}
+    </div>
+
+    <div class="footer-actions">
+      <button class="footer-subscribe-btn" onclick="document.getElementById('newsletterModal').classList.add('open')">
+        {{ '✉ Subscribe to Newsletter' if lang=='en' else '✉ S\'abonner' }}
+      </button>
+    </div>
+
+    <p class="footer-copy">
+      © {{ now.year }} {{ settings.name }}. {% if lang=='en' %}Crafted with purpose.{% else %}Conçu avec intention.{% endif %}
+    </p>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

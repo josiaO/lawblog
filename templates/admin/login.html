@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block auth_content %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-icon">⚖</div>
+    <h1 class="login-title">Admin Access</h1>
+    <p class="login-sub">Counsel & Craft — Site Manager</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="flash flash-{{ cat }}" style="margin-bottom:1rem;">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-input" required autofocus placeholder="admin@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-input" required placeholder="••••••••" />
+      </div>
+      <button type="submit" class="btn btn-gold" style="padding:0.9rem;font-size:1rem;margin-top:0.5rem;">
+        Sign In →
+      </button>
+    </form>
+
+    <p style="text-align:center;margin-top:1.5rem;font-size:0.8rem;color:var(--text-3);">
+      <a href="{{ url_for('index') }}" style="color:var(--accent);">← Back to site</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

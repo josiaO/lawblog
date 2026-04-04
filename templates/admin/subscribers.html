@@ -1,0 +1,50 @@
+{% extends "admin/base.html" %}
+{% block title %}Subscribers{% endblock %}
+{% block page_title %}Newsletter Subscribers{% endblock %}
+
+{% block content %}
+<div class="admin-card" style="margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+  <div>
+    <div style="font-size:2rem; font-weight:900; font-family:var(--font-display);">{{ subs|selectattr('active')|list|length }}</div>
+    <div style="font-size:0.8rem; color:var(--text-3); text-transform:uppercase; letter-spacing:0.08em; font-weight:700;">Active Subscribers</div>
+  </div>
+  <a href="/admin/subscribers?export=csv" class="btn btn-outline btn-sm">
+    <i class="fas fa-download"></i> Export CSV
+  </a>
+</div>
+
+<div class="admin-card">
+  {% if subs %}
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Name</th>
+        <th>Subscribed</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in subs %}
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-glow);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">{{ s.email[0].upper() }}</div>
+            <span>{{ s.email }}</span>
+          </div>
+        </td>
+        <td style="color:var(--text-2);">{{ s.name or '—' }}</td>
+        <td style="color:var(--text-3);font-size:0.85rem;">{{ s.subscribed_at.strftime('%b %d, %Y') }}</td>
+        <td><span class="badge {{ 'badge-green' if s.active else 'badge-gray' }}">{{ 'Active' if s.active else 'Inactive' }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:4rem;color:var(--text-3);">
+    <div style="font-size:3rem;margin-bottom:1rem;">📬</div>
+    <p>No subscribers yet. Add a subscribe form to your site to start growing your list.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

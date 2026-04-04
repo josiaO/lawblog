@@ -1,0 +1,60 @@
+{% extends "public/base.html" %}
+{% block title %}Portfolio — {{ settings.name }}{% endblock %}
+
+{% block content %}
+<section class="portfolio-hero">
+  <div class="section-inner">
+    <div class="section-eyebrow animate-fade-up">Portfolio</div>
+    <h1 class="section-title animate-fade-up delay-1" style="font-family:var(--font-display); font-size:clamp(2.5rem,5vw,4.5rem); font-weight:900; letter-spacing:-0.03em; line-height:1.1; margin-bottom:1.5rem;">
+      {% if lang=='en' %}Work & Achievements{% else %}Travaux & Réalisations{% endif %}
+    </h1>
+    <p class="animate-fade-up delay-2" style="color:var(--text-2); max-width:560px; font-size:1.05rem; line-height:1.8;">
+      {% if lang=='en' %}
+        A collection of academic papers, advocacy work, and published pieces that reflect a commitment to justice, youth empowerment, and the law.
+      {% else %}
+        Une collection de travaux académiques, d'actions militantes et de publications reflétant un engagement pour la justice et la jeunesse.
+      {% endif %}
+    </p>
+  </div>
+</section>
+
+<div class="section" style="padding-top:0;">
+  <div class="section-inner">
+
+    <!-- Sample portfolio items — admin can update via settings or future portfolio model -->
+    <div class="portfolio-grid">
+      {% for item in [
+        ('📜', 'Academic Research', 'Recherche Académique', 'Constitutional Law & Youth Rights', 'Droit Constitutionnel & Droits de la Jeunesse', 'Exploring the intersection of constitutional protections and the legal status of youth in modern democratic systems.', 'Explorer l\'intersection des protections constitutionnelles et du statut juridique des jeunes.', '2024'),
+        ('✍', 'Published Essay', 'Essai Publié', 'The Pen and the Gavel', 'La Plume et le Marteau', 'A meditation on how writing shapes legal thought and how legal thought shapes our world. Published in the student law review.', 'Une méditation sur comment l\'écriture façonne la pensée juridique.', '2024'),
+        ('🏛', 'Moot Court', 'Plaidoirie', 'Regional Moot Court Competition', 'Concours Régional de Plaidoirie', 'Represented the law faculty in regional competition. Argued a landmark case on digital privacy rights for minors.', 'Représenté la faculté de droit. Plaidé sur la vie privée numérique des mineurs.', '2023'),
+        ('✊', 'Advocacy', 'Militantisme', 'Youth Legal Aid Initiative', 'Initiative d\'Aide Juridique Jeunesse', 'Co-founded a campus initiative providing basic legal information to underprivileged youth in the community.', 'Co-fondé une initiative campus d\'information juridique pour les jeunes défavorisés.', '2023'),
+        ('🎤', 'Speaking', 'Conférence', 'TEDx Campus Talk', 'Conférence TEDx Campus', 'Delivered a talk on "Why Young People Should Care About the Law" to an audience of 300+ students.', 'Conférence sur "Pourquoi les jeunes doivent s\'intéresser au droit"', '2023'),
+        ('📰', 'Op-Ed', 'Tribune', 'National Youth Justice Op-Ed', 'Tribune Nationale sur la Justice Jeunesse', 'Published opinion piece arguing for reform of juvenile justice systems in the national student newspaper.', 'Tribune publiée pour la réforme de la justice des mineurs dans le journal étudiant national.', '2022'),
+      ] %}
+      <div class="portfolio-item reveal">
+        <div class="portfolio-icon">{{ item[0] }}</div>
+        <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:0.4rem;">
+          {{ item[1] if lang=='en' else item[2] }}
+        </div>
+        <h3 class="portfolio-title">{{ item[3] if lang=='en' else item[4] }}</h3>
+        <p class="portfolio-desc">{{ item[5] if lang=='en' else item[6] }}</p>
+        <div class="portfolio-year">{{ item[7] }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if settings.cv %}
+    <div class="reveal" style="text-align:center; margin-top: 4rem;">
+      <p style="color:var(--text-2); margin-bottom:1.5rem;">
+        {% if lang=='en' %}Want the full picture?{% else %}Vous voulez en savoir plus ?{% endif %}
+      </p>
+      <a href="{{ settings.cv|asset }}" class="btn-primary" download>
+        <i class="fas fa-file-pdf"></i>
+        {% if lang=='en' %}Download Full CV{% else %}Télécharger le CV complet{% endif %}
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
