@@ -10,3 +10,16 @@ dist/
 build/
 venv/
 .venv/
+.venv*/
+.venv
+.env.example
+.env.example.local
+.env.example.production
+.env.example.development
+.env.example.testing
+.env.example.staging
+.env.example.production
+.env.example.development
+.env.example.testing
+.env.example.staging
+
