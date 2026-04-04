@@ -19,7 +19,7 @@ from flask_login import (LoginManager, UserMixin, login_user, logout_user,
                          login_required, current_user)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 load_dotenv()
 
@@ -276,6 +276,29 @@ def _cloudinary_upload_stream(stream, folder, public_id=None, resource_type='aut
     return result['secure_url']
 
 
+def _read_upload_bytes(file):
+    """Read the whole upload into memory (PIL + werkzeug FileStorage is unreliable under gunicorn)."""
+    try:
+        file.seek(0)
+    except (OSError, AttributeError):
+        pass
+    raw = file.read()
+    if not raw:
+        raise ValueError('The uploaded file was empty.')
+    return raw
+
+
+def _pil_open_image_bytes(raw):
+    """Open image from bytes; return None if Pillow cannot decode (corrupt or not a raster image)."""
+    bio = io.BytesIO(raw)
+    try:
+        img = Image.open(bio)
+        img.load()
+        return img
+    except (OSError, UnidentifiedImageError, ValueError):
+        return None
+
+
 def save_upload(file, subfolder='', resize=None):
     """Save to local static/uploads or Cloudinary when configured (recommended on Railway)."""
     filename = secure_filename(file.filename or '')
@@ -290,9 +313,9 @@ def save_upload(file, subfolder='', resize=None):
         pass
 
     folder = subfolder or 'misc'
+    ext_l = ext.lower()
 
     if cloudinary_configured():
-        ext_l = ext.lower()
         if ext_l == '.pdf':
             try:
                 file.seek(0)
@@ -306,20 +329,32 @@ def save_upload(file, subfolder='', resize=None):
             )
 
         if resize and ext_l in ('.jpg', '.jpeg', '.png', '.webp'):
-            try:
-                file.seek(0)
-            except (OSError, AttributeError):
-                pass
-            img = Image.open(file)
-            img.thumbnail(resize)
-            buf = io.BytesIO()
-            save_kw = {'quality': 90}
-            if ext_l == '.png':
-                img.save(buf, format='PNG')
-            else:
-                img.save(buf, format='JPEG', **save_kw)
-            buf.seek(0)
-            return _cloudinary_upload_stream(buf, folder, public_id=unique_base, resource_type='image')
+            raw = _read_upload_bytes(file)
+            img = _pil_open_image_bytes(raw)
+            if img is not None:
+                img.thumbnail(resize)
+                buf = io.BytesIO()
+                save_kw = {'quality': 90}
+                if ext_l == '.png':
+                    img.save(buf, format='PNG')
+                else:
+                    if img.mode in ('RGBA', 'P') and ext_l != '.webp':
+                        img = img.convert('RGB')
+                    fmt = 'WEBP' if ext_l == '.webp' else 'JPEG'
+                    img.save(buf, format=fmt, **save_kw)
+                buf.seek(0)
+                return _cloudinary_upload_stream(buf, folder, public_id=unique_base, resource_type='image')
+            app.logger.warning(
+                'Pillow could not decode %r (%d bytes); uploading raw bytes to Cloudinary.',
+                filename,
+                len(raw),
+            )
+            return _cloudinary_upload_stream(
+                io.BytesIO(raw),
+                folder,
+                public_id=unique_base,
+                resource_type='image',
+            )
 
         try:
             file.seek(0)
@@ -332,25 +367,34 @@ def save_upload(file, subfolder='', resize=None):
             resource_type='image',
         )
 
-    filename = f"{unique_base}{ext}"
+    out_name = f"{unique_base}{ext}"
     if subfolder:
         dest_dir = os.path.join(app.config['UPLOAD_FOLDER'], subfolder)
-        rel = f"uploads/{subfolder}/{filename}"
+        rel = f"uploads/{subfolder}/{out_name}"
     else:
         dest_dir = app.config['UPLOAD_FOLDER']
-        rel = f"uploads/{filename}"
+        rel = f"uploads/{out_name}"
 
     os.makedirs(dest_dir, exist_ok=True)
-    path = os.path.join(dest_dir, filename)
+    path = os.path.join(dest_dir, out_name)
 
-    if resize and ext.lower() in ('.jpg', '.jpeg', '.png', '.webp'):
-        try:
-            file.seek(0)
-        except (OSError, AttributeError):
-            pass
-        img = Image.open(file)
+    if resize and ext_l in ('.jpg', '.jpeg', '.png', '.webp'):
+        raw = _read_upload_bytes(file)
+        img = _pil_open_image_bytes(raw)
+        if img is None:
+            raise ValueError(
+                'Could not read that image. It may be corrupt or not a valid PNG/JPEG/WebP. '
+                'Try re-saving it from your photo editor or use another file.'
+            )
         img.thumbnail(resize)
-        img.save(path, quality=90)
+        if ext_l == '.png':
+            img.save(path, format='PNG')
+        elif ext_l == '.webp':
+            img.save(path, format='WEBP', quality=90)
+        else:
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            img.save(path, quality=90, format='JPEG')
     else:
         try:
             file.seek(0)
@@ -884,22 +928,20 @@ def admin_settings():
                 f = request.files[field]
                 if allowed_file(f.filename):
                     try:
-                        f.seek(0)
-                    except (OSError, AttributeError):
-                        pass
-                    rel = save_upload(f, subfolder, resize)
-                    SiteSettings.set(field, rel)
+                        rel = save_upload(f, subfolder, resize)
+                        SiteSettings.set(field, rel)
+                    except ValueError as e:
+                        flash(str(e), 'error')
 
         # CV upload
         if 'cv' in request.files and request.files['cv'].filename:
             f = request.files['cv']
             if f.filename.endswith('.pdf'):
                 try:
-                    f.seek(0)
-                except (OSError, AttributeError):
-                    pass
-                rel = save_upload(f, 'documents')
-                SiteSettings.set('cv', rel)
+                    rel = save_upload(f, 'documents')
+                    SiteSettings.set('cv', rel)
+                except ValueError as e:
+                    flash(str(e), 'error')
 
         flash('Settings saved!', 'success')
         return redirect(url_for('admin_settings'))
@@ -969,10 +1011,9 @@ def admin_new_post():
             f = request.files['cover_image']
             if allowed_file(f.filename):
                 try:
-                    f.seek(0)
-                except (OSError, AttributeError):
-                    pass
-                cover = save_upload(f, 'covers', (1400, 800))
+                    cover = save_upload(f, 'covers', (1400, 800))
+                except ValueError as e:
+                    flash(str(e), 'error')
 
         post = Post(
             slug=slug,
@@ -1017,10 +1058,9 @@ def admin_edit_post(post_id):
             f = request.files['cover_image']
             if allowed_file(f.filename):
                 try:
-                    f.seek(0)
-                except (OSError, AttributeError):
-                    pass
-                post.cover_image = save_upload(f, 'covers', (1400, 800))
+                    post.cover_image = save_upload(f, 'covers', (1400, 800))
+                except ValueError as e:
+                    flash(str(e), 'error')
 
         db.session.commit()
         if post.published and not was_published:
@@ -1068,10 +1108,9 @@ def admin_upload_image():
     f = request.files['file']
     if f and allowed_file(f.filename):
         try:
-            f.seek(0)
-        except (OSError, AttributeError):
-            pass
-        rel = save_upload(f, 'blog')
+            rel = save_upload(f, 'blog')
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
         if rel.startswith('http://') or rel.startswith('https://'):
             url = rel
         else:
