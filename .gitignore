@@ -2,7 +2,11 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+.env.local
+.env.*.local
 instance/
+*.db
+site.db
 static/uploads/
 .DS_Store
 *.egg-info/
@@ -12,14 +16,3 @@ venv/
 .venv/
 .venv*/
 .venv
-.env.example
-.env.example.local
-.env.example.production
-.env.example.development
-.env.example.testing
-.env.example.staging
-.env.example.production
-.env.example.development
-.env.example.testing
-.env.example.staging
-

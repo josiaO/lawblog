@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ subject_line }}</title>
+  <style>
+    body { margin: 0; background: #f4f4f4; font-family: Arial, Helvetica, sans-serif; }
+    .email-container { max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .header { background: #1e1e2f; color: #ffffff; padding: 20px; text-align: center; font-size: 20px; font-weight: bold; }
+    .hero img { width: 100%; max-width: 600px; height: auto; display: block; }
+    .content { padding: 24px 20px; }
+    .title { font-size: 22px; font-weight: bold; margin: 0 0 10px 0; color: #1e1e2f; }
+    .meta { font-size: 12px; color: #777777; margin-bottom: 15px; }
+    .excerpt { font-size: 15px; line-height: 1.6; color: #333333; margin-bottom: 20px; }
+    .cta { text-align: center; margin: 24px 0; }
+    .cta a { background: #6c5ce7; color: #ffffff !important; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; }
+    .tags { margin-top: 18px; }
+    .tag { display: inline-block; background: #eeeeee; color: #333333; padding: 5px 10px; border-radius: 20px; font-size: 12px; margin: 0 5px 8px 0; }
+    .footer { background: #fafafa; padding: 18px 16px; text-align: center; font-size: 12px; color: #999999; line-height: 1.5; }
+    .footer a { color: #6c5ce7; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">{{ header_title }}</div>
+    {% if cover_url %}
+    <div class="hero">
+      <img src="{{ cover_url }}" alt="" width="600" style="width:100%;max-width:600px;height:auto;display:block;border:0;">
+    </div>
+    {% endif %}
+    <div class="content">
+      <div class="title">{{ post_title }}</div>
+      <div class="meta">{{ meta_line }}</div>
+      <div class="excerpt">{{ excerpt_text }}</div>
+      <div class="cta">
+        <a href="{{ post_url }}">{{ cta_label }}</a>
+      </div>
+      {% if tags %}
+      <div class="tags">
+        {% for tag in tags %}
+        <span class="tag">{{ tag }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="footer">
+      {{ footer_note }}<br>
+      <a href="{{ post_url }}">{{ view_article_label }}</a>
+      {% if unsubscribe_mailto %}
+      &nbsp;|&nbsp;<a href="{{ unsubscribe_mailto }}">{{ unsubscribe_label }}</a>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

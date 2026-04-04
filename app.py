@@ -3,14 +3,17 @@ import io
 import json
 import re
 import math
+import threading
 import requests
 import markdown2
 import bleach
 from datetime import datetime
+from urllib.parse import quote
 from slugify import slugify
 from dotenv import load_dotenv
 from flask import (Flask, render_template, redirect, url_for, request,
-                   flash, jsonify, abort, session, send_from_directory)
+                   flash, jsonify, abort, session, send_from_directory,
+                   has_request_context)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (LoginManager, UserMixin, login_user, logout_user,
                          login_required, current_user)
@@ -370,19 +373,214 @@ def verify_recaptcha(token):
 
 def add_to_brevo(email, name=''):
     api_key = os.environ.get('BREVO_API_KEY', '')
-    list_id = os.environ.get('BREVO_LIST_ID', '')
+    list_id_raw = os.environ.get('BREVO_LIST_ID', '')
     if not api_key or api_key == 'your-brevo-api-key':
         return True  # skip in dev
+    try:
+        list_id = int(str(list_id_raw).strip())
+    except (TypeError, ValueError):
+        app.logger.warning('BREVO_LIST_ID missing or invalid; contact not synced to Brevo list.')
+        return False
     url = 'https://api.brevo.com/v3/contacts'
     headers = {'api-key': api_key, 'Content-Type': 'application/json'}
     payload = {
         'email': email,
         'attributes': {'FIRSTNAME': name},
-        'listIds': [int(list_id)],
+        'listIds': [list_id],
         'updateEnabled': True
     }
     resp = requests.post(url, json=payload, headers=headers, timeout=10)
     return resp.status_code in (200, 201, 204)
+
+
+def brevo_transactional_ready():
+    api_key = (os.environ.get('BREVO_API_KEY') or '').strip()
+    if not api_key or api_key == 'your-brevo-api-key':
+        return False
+    return bool((os.environ.get('BREVO_SENDER_EMAIL') or '').strip())
+
+
+def get_public_base_url():
+    """Canonical site URL for emails and absolute asset links. Set PUBLIC_BASE_URL in production."""
+    for key in ('PUBLIC_BASE_URL', 'SITE_URL'):
+        v = (os.environ.get(key) or '').strip().rstrip('/')
+        if v:
+            return v
+    if has_request_context():
+        return request.host_url.rstrip('/')
+    return ''
+
+
+def absolute_public_static_url(stored_path):
+    """Turn DB upload path (or absolute URL) into a full URL for HTML emails."""
+    if not stored_path or not str(stored_path).strip():
+        return ''
+    s = str(stored_path).strip()
+    if s.startswith('http://') or s.startswith('https://'):
+        return s
+    base = get_public_base_url()
+    if not base:
+        return ''
+    path = s.lstrip('/')
+    if path.startswith('static/'):
+        path = path[len('static/'):]
+    return f'{base}/static/{path}'
+
+
+def brevo_send_transactional(to_email, to_name, subject, html_content):
+    """Send one transactional email via Brevo REST API."""
+    if not brevo_transactional_ready():
+        return False
+    api_key = os.environ.get('BREVO_API_KEY', '').strip()
+    sender_email = os.environ.get('BREVO_SENDER_EMAIL', '').strip()
+    settings = get_settings()
+    sender_name = (os.environ.get('BREVO_SENDER_NAME') or '').strip() or (
+        settings.get('name') or 'Newsletter'
+    )
+    url = 'https://api.brevo.com/v3/smtp/email'
+    headers = {'api-key': api_key, 'Content-Type': 'application/json'}
+    display = (to_name or '').strip() or to_email.split('@')[0]
+    payload = {
+        'sender': {'name': sender_name, 'email': sender_email},
+        'to': [{'email': to_email.strip(), 'name': display[:120]}],
+        'subject': subject[:998],
+        'htmlContent': html_content,
+    }
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=30)
+    except requests.RequestException:
+        app.logger.exception('Brevo transactional request failed for %s', to_email)
+        return False
+    if resp.status_code not in (200, 201, 202, 204):
+        app.logger.warning(
+            'Brevo transactional %s for %s: %s %s',
+            resp.status_code, to_email, resp.reason, (resp.text or '')[:300],
+        )
+        return False
+    return True
+
+
+def _plain_excerpt_for_email(post, max_len=400):
+    ex = (post.excerpt_en or '').strip()
+    if ex:
+        t = bleach.clean(ex, tags=[], strip=True)
+        t = re.sub(r'\s+', ' ', t).strip()
+    else:
+        body = post.body_en or ''
+        if post.body_looks_like_html(body):
+            plain = _strip_html_tags(body)
+        else:
+            plain = body
+        t = re.sub(r'\s+', ' ', (plain or '').strip()).strip()
+    if len(t) <= max_len:
+        return t
+    cut = t[:max_len].rsplit(' ', 1)[0]
+    return (cut or t[:max_len]) + '…'
+
+
+def send_newsletter_welcome_email(to_email, name='', returning=False):
+    if not brevo_transactional_ready():
+        return
+    settings = get_settings()
+    site_name = settings.get('name') or 'Our blog'
+    home_url = get_public_base_url() or '#'
+    contact = (settings.get('email') or '').strip()
+    hero_url = absolute_public_static_url(settings.get('banner_image') or '')
+    if returning:
+        header_title = 'Welcome back'
+        subject_line = f"You're resubscribed - {site_name}"
+        greeting = f"Hi {name.split()[0] if name else 'there'}, good to see you again."
+        body_text = (
+            f"You're back on the list at {site_name}. "
+            "We'll email you when a new article is published."
+        )
+    else:
+        header_title = "You're subscribed"
+        subject_line = f'Welcome to {site_name}'
+        greeting = f"Hi {name.split()[0] if name else 'there'}, thank you for subscribing."
+        body_text = (
+            f"You'll get occasional updates from {site_name} when new writing goes live. "
+            'No spam - just the work.'
+        )
+    unsub_mailto = ''
+    if contact:
+        unsub_mailto = f'mailto:{contact}?subject={quote("Unsubscribe from newsletter")}'
+    html = render_template(
+        'email/welcome_subscribe.html',
+        subject_line=subject_line,
+        header_title=header_title,
+        hero_url=hero_url,
+        greeting=greeting,
+        body_text=body_text,
+        home_url=home_url,
+        cta_label='Visit the site',
+        footer_note='You received this because you subscribed to our newsletter.',
+        contact_email=contact,
+        unsubscribe_mailto=unsub_mailto,
+        unsubscribe_label='Unsubscribe',
+        view_site_label='View in browser',
+    )
+    brevo_send_transactional(to_email, name, subject_line, html)
+
+
+def _render_new_post_email(post):
+    settings = get_settings()
+    site_name = settings.get('name') or 'Our blog'
+    author = (settings.get('name') or 'The author').strip()
+    base = get_public_base_url()
+    post_url = f'{base}/blog/{post.slug}' if base else f'/blog/{post.slug}'
+    cover_url = absolute_public_static_url(post.cover_image or '')
+    excerpt_text = _plain_excerpt_for_email(post)
+    meta_line = f'By {author} • {post.reading_time("en")} min read'
+    contact = (settings.get('email') or '').strip()
+    unsub_mailto = f'mailto:{contact}?subject={quote("Unsubscribe from newsletter")}' if contact else ''
+    return render_template(
+        'email/new_post_notify.html',
+        subject_line=f'New on {site_name}: {post.title_en}',
+        header_title='New blog post 🚀',
+        cover_url=cover_url,
+        post_title=post.title_en,
+        meta_line=meta_line,
+        excerpt_text=excerpt_text,
+        post_url=post_url,
+        cta_label='Read full article',
+        tags=post.tag_list(),
+        footer_note='You received this email because you subscribed to our blog.',
+        view_article_label='View in browser',
+        contact_email=contact,
+        unsubscribe_mailto=unsub_mailto,
+        unsubscribe_label='Unsubscribe',
+    )
+
+
+def schedule_new_post_notifications(post_id):
+    """Email active subscribers after a post becomes published (background thread)."""
+    flag = (os.environ.get('BREVO_NOTIFY_NEW_POST') or '1').strip().lower()
+    if flag in ('0', 'false', 'no', 'off'):
+        return
+    if not brevo_transactional_ready():
+        app.logger.info('New post emails skipped: set BREVO_API_KEY and BREVO_SENDER_EMAIL.')
+        return
+
+    def worker():
+        with app.app_context():
+            if not get_public_base_url():
+                app.logger.warning(
+                    'New post emails skipped: set PUBLIC_BASE_URL (or SITE_URL) so links work in email.'
+                )
+                return
+            post = Post.query.get(post_id)
+            if not post or not post.published:
+                return
+            subs = Subscriber.query.filter_by(active=True).all()
+            if not subs:
+                return
+            html = _render_new_post_email(post)
+            subject = f'New on {get_settings().get("name") or "Blog"}: {post.title_en}'[:998]
+            for sub in subs:
+                brevo_send_transactional(sub.email, sub.name or '', subject, html)
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 def get_lang():
@@ -509,6 +707,7 @@ def subscribe():
             existing.active = True
             db.session.commit()
             add_to_brevo(email, name)
+            send_newsletter_welcome_email(email, name, returning=True)
             return jsonify({'ok': True, 'msg': 'Welcome back! You\'re resubscribed.'})
         return jsonify({'ok': False, 'msg': 'You\'re already subscribed!'})
 
@@ -516,6 +715,7 @@ def subscribe():
     db.session.add(sub)
     db.session.commit()
     add_to_brevo(email, name)
+    send_newsletter_welcome_email(email, name, returning=False)
     return jsonify({'ok': True, 'msg': 'You\'re in! Thank you for subscribing.'})
 
 
@@ -685,6 +885,8 @@ def admin_new_post():
         )
         db.session.add(post)
         db.session.commit()
+        if post.published:
+            schedule_new_post_notifications(post.id)
         flash('Post created!', 'success')
         return redirect(url_for('admin_posts'))
     return render_template('admin/post_edit.html', post=None)
@@ -695,6 +897,7 @@ def admin_new_post():
 def admin_edit_post(post_id):
     post = Post.query.get_or_404(post_id)
     if request.method == 'POST':
+        was_published = post.published
         post.title_en = request.form.get('title_en', '').strip()
         post.title_fr = request.form.get('title_fr', '')
         post.excerpt_en = request.form.get('excerpt_en', '')
@@ -716,6 +919,8 @@ def admin_edit_post(post_id):
                 post.cover_image = save_upload(f, 'covers', (1400, 800))
 
         db.session.commit()
+        if post.published and not was_published:
+            schedule_new_post_notifications(post.id)
         flash('Post updated!', 'success')
         return redirect(url_for('admin_posts'))
     return render_template('admin/post_edit.html', post=post)
@@ -736,8 +941,11 @@ def admin_delete_post(post_id):
 @login_required
 def admin_toggle_post(post_id):
     post = Post.query.get_or_404(post_id)
+    was_published = post.published
     post.published = not post.published
     db.session.commit()
+    if post.published and not was_published:
+        schedule_new_post_notifications(post.id)
     return jsonify({'published': post.published})
 
 
