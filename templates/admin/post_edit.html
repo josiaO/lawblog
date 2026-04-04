@@ -50,6 +50,36 @@
   flex-direction: column;
   gap: 1rem;
 }
+.writing-tools-details {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  overflow: hidden;
+}
+.writing-tools-details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.85rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  user-select: none;
+}
+.writing-tools-details > summary::-webkit-details-marker { display: none; }
+.writing-tools-details > summary::after {
+  content: ' ▼';
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+.writing-tools-details[open] > summary::after { content: ' ▲'; }
+.writing-tools-details .writing-tools-inner {
+  padding: 0 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
 .writing-tools-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -272,29 +302,36 @@
 
   <div class="post-editor-layout">
 
-    <!-- Human-readable writing tools (Quill + optional AI) -->
+    <!-- Writing tools: collapsed by default to keep the page lighter -->
     <aside class="writing-tools-sidebar">
-      <div class="writing-tools-card">
-        <h3>AI writing tools</h3>
-        <p class="form-hint" style="margin-bottom:0.75rem;font-size:0.72rem;">
-          Improves the <strong>active</strong> tab. Requires <code style="font-size:0.7rem;">OPENROUTER_API_KEY</code>.
-        </p>
-        <button type="button" class="writing-tool-btn ai" data-ai="improve" title="Clarity and flow">
-          ✨ Improve writing
-        </button>
-        <button type="button" class="writing-tool-btn ai" data-ai="grammar" title="Spelling and grammar">
-          🧠 Fix grammar
-        </button>
-        <button type="button" class="writing-tool-btn ai" data-ai="tone" title="Warmer, clearer tone">
-          🎯 Improve tone
-        </button>
-      </div>
-      <div class="writing-tools-card">
-        <h3>Quick inserts</h3>
-        <button type="button" class="writing-tool-btn insert" data-insert="section">＋ Section heading</button>
-        <button type="button" class="writing-tool-btn insert" data-insert="quote">＋ Quote block</button>
-        <button type="button" class="writing-tool-btn insert" data-insert="example">＋ Example line</button>
-      </div>
+      <details class="writing-tools-details">
+        <summary>Writing tools &amp; AI</summary>
+        <div class="writing-tools-inner">
+          <div class="writing-tools-card" style="border:none;padding:0;background:transparent;">
+            <h3>AI writing tools</h3>
+            <p class="form-hint" style="margin-bottom:0.75rem;font-size:0.72rem;">
+              Improves the <strong>active</strong> tab. Default: Google Gemini — set <code style="font-size:0.68rem;">GEMINI_API_KEY</code>
+              (free from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">AI Studio</a>).
+              Or <code style="font-size:0.68rem;">AI_PROVIDER=grok</code> + <code style="font-size:0.68rem;">XAI_API_KEY</code>.
+            </p>
+            <button type="button" class="writing-tool-btn ai" data-ai="improve" title="Clarity and flow">
+              ✨ Improve writing
+            </button>
+            <button type="button" class="writing-tool-btn ai" data-ai="grammar" title="Spelling and grammar">
+              🧠 Fix grammar
+            </button>
+            <button type="button" class="writing-tool-btn ai" data-ai="tone" title="Warmer, clearer tone">
+              🎯 Improve tone
+            </button>
+          </div>
+          <div class="writing-tools-card" style="border:none;padding:0;background:transparent;">
+            <h3>Quick inserts</h3>
+            <button type="button" class="writing-tool-btn insert" data-insert="section">＋ Section heading</button>
+            <button type="button" class="writing-tool-btn insert" data-insert="quote">＋ Quote block</button>
+            <button type="button" class="writing-tool-btn insert" data-insert="example">＋ Example line</button>
+          </div>
+        </div>
+      </details>
     </aside>
 
     <div class="post-editor-main" style="display:flex; flex-direction:column; gap:1.5rem;">
