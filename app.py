@@ -1160,10 +1160,7 @@ def gemini_rewrite_editor_html(html_fragment, instruction):
     """Rewrite HTML via Google Gemini (free tier: https://aistudio.google.com/apikey)."""
     api_key = (os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY') or '').strip()
     if not api_key:
-        return None, (
-            'Add GEMINI_API_KEY from Google AI Studio (free). Or set AI_PROVIDER=grok with XAI_API_KEY, '
-            'or AI_PROVIDER=openrouter with OPENROUTER_API_KEY.'
-        )
+        return None, None
     model = (os.environ.get('GEMINI_MODEL') or 'gemini-2.0-flash').strip()
     url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
     user_text = f'{instruction}\n\nHTML:\n{html_fragment}'
@@ -1219,7 +1216,7 @@ def grok_rewrite_editor_html(html_fragment, instruction):
     """Rewrite HTML via xAI Grok (OpenAI-compatible API)."""
     api_key = (os.environ.get('XAI_API_KEY') or '').strip()
     if not api_key:
-        return None, 'Add XAI_API_KEY for Grok, or use AI_PROVIDER=gemini with GEMINI_API_KEY.'
+        return None, None
     model = (os.environ.get('XAI_MODEL') or 'grok-2-latest').strip()
     url = (os.environ.get('XAI_API_BASE') or 'https://api.x.ai/v1').rstrip('/') + '/chat/completions'
     headers = {
@@ -1270,10 +1267,11 @@ def grok_rewrite_editor_html(html_fragment, instruction):
 
 def openrouter_rewrite_editor_html(html_fragment, instruction):
     """Rewrite HTML via OpenRouter (OpenAI-compatible chat completions API)."""
-    api_key = os.environ.get('OPENROUTER_API_KEY', '')
+    api_key = (os.environ.get('OPENROUTER_API_KEY') or '').strip()
     if not api_key:
-        return None, 'Add OPENROUTER_API_KEY to your environment (with AI_PROVIDER=openrouter).'
-    model = os.environ.get('OPENROUTER_MODEL', 'openai/gpt-4o-mini')
+        return None, None
+    # Default to Google's Gemini on OpenRouter when this tier is used as fallback.
+    model = (os.environ.get('OPENROUTER_MODEL') or 'google/gemini-2.0-flash-001').strip()
     base = os.environ.get('OPENROUTER_API_BASE', 'https://openrouter.ai/api/v1').rstrip('/')
     url = f'{base}/chat/completions'
     headers = {
@@ -1329,13 +1327,46 @@ def openrouter_rewrite_editor_html(html_fragment, instruction):
 
 
 def rewrite_editor_html(html_fragment, instruction):
-    """Dispatch to Gemini (default), Grok, or OpenRouter based on AI_PROVIDER."""
-    provider = (os.environ.get('AI_PROVIDER') or 'gemini').strip().lower()
-    if provider in ('openrouter', 'router'):
-        return openrouter_rewrite_editor_html(html_fragment, instruction)
-    if provider in ('grok', 'xai'):
-        return grok_rewrite_editor_html(html_fragment, instruction)
-    return gemini_rewrite_editor_html(html_fragment, instruction)
+    """Try AI providers in order: Gemini → xAI Grok → OpenRouter. Uses the first configured key; on API failure, falls back to the next."""
+    gem_key = (os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY') or '').strip()
+    xai_key = (os.environ.get('XAI_API_KEY') or '').strip()
+    or_key = (os.environ.get('OPENROUTER_API_KEY') or '').strip()
+
+    failures = []
+
+    if gem_key:
+        out, err = gemini_rewrite_editor_html(html_fragment, instruction)
+        if out:
+            app.logger.info('AI writing: used Gemini')
+            return out, None
+        if err:
+            failures.append(f'Gemini: {err}')
+            app.logger.warning('AI writing: Gemini failed, trying next provider — %s', err[:200])
+
+    if xai_key:
+        out, err = grok_rewrite_editor_html(html_fragment, instruction)
+        if out:
+            app.logger.info('AI writing: used xAI Grok')
+            return out, None
+        if err:
+            failures.append(f'Grok: {err}')
+            app.logger.warning('AI writing: Grok failed, trying next provider — %s', err[:200])
+
+    if or_key:
+        out, err = openrouter_rewrite_editor_html(html_fragment, instruction)
+        if out:
+            app.logger.info('AI writing: used OpenRouter')
+            return out, None
+        if err:
+            failures.append(f'OpenRouter: {err}')
+
+    if not (gem_key or xai_key or or_key):
+        return None, (
+            'No AI API keys configured. Set one or more of: GEMINI_API_KEY (or GOOGLE_API_KEY), '
+            'XAI_API_KEY, OPENROUTER_API_KEY.'
+        )
+    detail = ' '.join(failures) if failures else 'Every provider returned empty output.'
+    return None, f'All configured AI providers failed. {detail}'
 
 
 @app.route('/admin/ai/writing', methods=['POST'])

@@ -310,9 +310,11 @@
           <div class="writing-tools-card" style="border:none;padding:0;background:transparent;">
             <h3>AI writing tools</h3>
             <p class="form-hint" style="margin-bottom:0.75rem;font-size:0.72rem;">
-              Improves the <strong>active</strong> tab. Default: Google Gemini — set <code style="font-size:0.68rem;">GEMINI_API_KEY</code>
-              (free from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">AI Studio</a>).
-              Or <code style="font-size:0.68rem;">AI_PROVIDER=grok</code> + <code style="font-size:0.68rem;">XAI_API_KEY</code>.
+              Improves the <strong>active</strong> tab. Uses the first available provider:
+              <code style="font-size:0.65rem;">GEMINI_API_KEY</code> →
+              <code style="font-size:0.65rem;">XAI_API_KEY</code> →
+              <code style="font-size:0.65rem;">OPENROUTER_API_KEY</code> (defaults to Gemini on OpenRouter).
+              Keys can be <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini (free)</a>, Grok, or OpenRouter.
             </p>
             <button type="button" class="writing-tool-btn ai" data-ai="improve" title="Clarity and flow">
               ✨ Improve writing
