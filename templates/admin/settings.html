@@ -4,6 +4,7 @@
 
 {% block content %}
 <form method="POST" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
   <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
 
@@ -147,6 +148,7 @@
     Brevo → SMTP &amp; API → Senders (not <code>@*.railway.app</code>).
   </p>
   <form method="POST" action="{{ url_for('admin_brevo_test_email') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <button type="submit" class="btn btn-outline btn-sm">
       <i class="fas fa-paper-plane"></i> Send test email to {{ current_user.email }}
     </button>

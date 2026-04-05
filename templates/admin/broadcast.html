@@ -9,6 +9,7 @@
     (<code style="font-size:0.75rem;">BREVO_SENDER_EMAIL</code>). Plain HTML is allowed; scripts are stripped.
   </p>
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     <div class="form-group">
       <label class="form-label">Subject line *</label>
       <input type="text" name="subject" class="form-input" required maxlength="200"

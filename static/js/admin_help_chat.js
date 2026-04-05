@@ -33,6 +33,11 @@
     return d.innerHTML;
   }
 
+  function csrfHeader() {
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.getAttribute('content') || '' : '';
+  }
+
   function formatReply(text) {
     var paras = (text || '').trim().split(/\n\n+/);
     return paras
@@ -165,7 +170,11 @@
     fetch(CHAT_URL, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRFToken': csrfHeader(),
+      },
       body: JSON.stringify({ message: q, lang: lang }),
     })
       .then(function (r) {

@@ -381,6 +381,7 @@
 
 {% block content %}
 <form method="POST" enctype="multipart/form-data" id="postForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
   <div class="quill-sync-fields" aria-hidden="true">
     <textarea name="body_en" id="body_en_field" class="body-field-hidden" tabindex="-1"></textarea>
@@ -607,6 +608,11 @@ var toolbarOptions = [
   ['clean'],
 ];
 
+function adminCsrfToken() {
+  var m = document.querySelector('meta[name="csrf-token"]');
+  return m ? (m.getAttribute('content') || '') : '';
+}
+
 function imageHandler(quill) {
   var input = document.createElement('input');
   input.type = 'file';
@@ -616,7 +622,11 @@ function imageHandler(quill) {
     if (!file) return;
     var fd = new FormData();
     fd.append('file', file);
-    fetch('/admin/upload-image', { method: 'POST', body: fd })
+    fetch('/admin/upload-image', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': adminCsrfToken() },
+      body: fd,
+    })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data.url) {
@@ -782,7 +792,11 @@ function runAi(action) {
   setAiLoading(true);
   fetch('/admin/ai/writing', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRFToken': adminCsrfToken(),
+    },
     body: JSON.stringify({
       content: payload.content,
       action: action,

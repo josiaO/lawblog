@@ -17,8 +17,10 @@ from flask import (Flask, render_template, redirect, url_for, request,
                    flash, jsonify, abort, session, send_from_directory,
                    has_request_context, current_app)
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import joinedload
 from flask_login import (LoginManager, UserMixin, login_user, logout_user,
                          login_required, current_user)
+from flask_wtf.csrf import CSRFError, CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.routing import BuildError
@@ -29,7 +31,35 @@ from PIL import Image, UnidentifiedImageError
 load_dotenv()
 
 app = Flask(__name__, instance_path=os.path.join(os.path.dirname(__file__), 'instance'))
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-prod')
+
+_DEV_SECRET_PLACEHOLDER = 'dev-secret-key-change-in-prod'
+
+
+def _is_production_deployment():
+    """True when the app is treated as live (must not use dev defaults)."""
+    return (
+        os.environ.get('FLASK_ENV', '').lower() == 'production'
+        or os.environ.get('ENV', '').lower() == 'production'
+        or os.environ.get('RAILWAY_ENVIRONMENT', '').lower() == 'production'
+    )
+
+
+_secret_key = (os.environ.get('SECRET_KEY') or '').strip()
+if _is_production_deployment():
+    if not _secret_key:
+        raise RuntimeError(
+            'SECRET_KEY must be set to a long random value in production '
+            '(detected FLASK_ENV=production, ENV=production, or RAILWAY_ENVIRONMENT=production).'
+        )
+    if _secret_key == _DEV_SECRET_PLACEHOLDER:
+        raise RuntimeError('SECRET_KEY must not use the development placeholder in production.')
+    if len(_secret_key) < 32:
+        raise RuntimeError('SECRET_KEY should be at least 32 characters in production.')
+else:
+    if not _secret_key:
+        _secret_key = _DEV_SECRET_PLACEHOLDER
+app.config['SECRET_KEY'] = _secret_key
+
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
 
 # Database
@@ -38,6 +68,23 @@ if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+if database_url.startswith('sqlite'):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'connect_args': {'check_same_thread': False},
+    }
+else:
+    try:
+        _pool_size = int(os.environ.get('SQLALCHEMY_POOL_SIZE') or os.environ.get('DB_POOL_SIZE', 10))
+        _max_overflow = int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW') or os.environ.get('DB_POOL_MAX_OVERFLOW', 20))
+        _pool_recycle = int(os.environ.get('SQLALCHEMY_POOL_RECYCLE') or os.environ.get('DB_POOL_RECYCLE', 3600))
+    except ValueError:
+        _pool_size, _max_overflow, _pool_recycle = 10, 20, 3600
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_size': max(1, _pool_size),
+        'max_overflow': max(0, _max_overflow),
+        'pool_recycle': max(300, _pool_recycle),
+        'pool_pre_ping': True,
+    }
 
 # Upload folder
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
@@ -46,8 +93,22 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'}
 
 db = SQLAlchemy(app)
+csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'admin_login'
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    accept = (request.headers.get('Accept') or '')
+    if 'application/json' in accept:
+        return jsonify({
+            'ok': False,
+            'msg': 'Security check failed. Refresh the page and try again.',
+        }), 400
+    flash('Your session expired or the form was resent. Please try again.', 'error')
+    return redirect(request.referrer or url_for('index')), 400
+
 
 # ─── Rich text (Quill) / Markdown ─────────────────────────────────────────────
 
@@ -66,6 +127,60 @@ BLEACH_ATTRS = {
 }
 # Bleach 6+: allowed URL schemes for href, src, etc.
 BLEACH_PROTOCOLS = frozenset({'http', 'https', 'mailto', 'tel', 'data'})
+
+
+def _bleach_max_input_chars():
+    try:
+        return max(50_000, int(os.environ.get('BLEACH_MAX_INPUT_CHARS', '2000000')))
+    except ValueError:
+        return 2_000_000
+
+
+def _sanitize_rich_html(html: str) -> str:
+    """Bleach-clean HTML with a size cap to avoid pathological CPU use on huge documents."""
+    if not html or not str(html).strip():
+        return ''
+    h = str(html)
+    cap = _bleach_max_input_chars()
+    if len(h) > cap:
+        log = current_app.logger if has_request_context() else app.logger
+        log.warning('Sanitizing truncated HTML from %d to %d chars (BLEACH_MAX_INPUT_CHARS)', len(h), cap)
+        h = h[:cap]
+    return bleach.clean(
+        h, tags=BLEACH_TAGS, attributes=BLEACH_ATTRS,
+        protocols=BLEACH_PROTOCOLS, strip=True,
+    )
+
+
+def _openai_http_timeout(default: float = 90.0) -> float:
+    """Bounded HTTP timeout for OpenAI-compatible clients (Groq, OpenRouter, etc.)."""
+    raw = (os.environ.get('AI_HTTP_TIMEOUT') or '').strip()
+    if not raw:
+        return default
+    try:
+        return max(5.0, min(float(raw), 600.0))
+    except ValueError:
+        return default
+
+
+def _openai_http_timeout_help() -> float:
+    raw = (os.environ.get('AI_HTTP_TIMEOUT_HELP') or '').strip()
+    if raw:
+        try:
+            return max(5.0, min(float(raw), 600.0))
+        except ValueError:
+            pass
+    return _openai_http_timeout(60.0)
+
+
+def _openai_http_timeout_editor() -> float:
+    raw = (os.environ.get('AI_HTTP_TIMEOUT_EDITOR') or '').strip()
+    if raw:
+        try:
+            return max(5.0, min(float(raw), 600.0))
+        except ValueError:
+            pass
+    return _openai_http_timeout(120.0)
 
 
 def _strip_html_tags(text):
@@ -137,6 +252,11 @@ class SiteSettings(db.Model):
 class Post(db.Model):
     """Blog post. Columns title_fr / excerpt_fr / body_fr store Kiswahili (legacy names)."""
 
+    __table_args__ = (
+        db.Index('ix_post_published_created_at', 'published', 'created_at'),
+        db.Index('ix_post_published_featured_created', 'published', 'featured', 'created_at'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(200), unique=True, nullable=False)
     title_en = db.Column(db.String(300), nullable=False)
@@ -202,17 +322,11 @@ class Post(db.Model):
     def rendered_body(self, lang='en'):
         body = self._raw_body(lang)
         if self.body_looks_like_html(body):
-            return bleach.clean(
-                body, tags=BLEACH_TAGS, attributes=BLEACH_ATTRS,
-                protocols=BLEACH_PROTOCOLS, strip=True,
-            )
+            return _sanitize_rich_html(body)
         html = markdown2.markdown(
             body, extras=['fenced-code-blocks', 'tables', 'strike', 'footnotes', 'task_list']
         )
-        return bleach.clean(
-            html, tags=BLEACH_TAGS, attributes=BLEACH_ATTRS,
-            protocols=BLEACH_PROTOCOLS, strip=True,
-        )
+        return _sanitize_rich_html(html)
 
     def tag_list(self):
         if not self.tags:
@@ -1117,8 +1231,12 @@ def blog():
         q = q.filter(Post.tags.contains(tag))
     posts = q.order_by(Post.created_at.desc()).paginate(page=page, per_page=9, error_out=False)
     all_tags = set()
-    for p in Post.query.filter_by(published=True).all():
-        all_tags.update(p.tag_list())
+    for (tags_blob,) in db.session.query(Post.tags).filter(Post.published.is_(True)).all():
+        if tags_blob:
+            for piece in str(tags_blob).split(','):
+                t = piece.strip()
+                if t:
+                    all_tags.add(t)
     return render_template('public/blog.html', posts=posts, all_tags=sorted(all_tags), active_tag=tag, lang=lang)
 
 
@@ -1928,7 +2046,7 @@ def help_assistant_ai_expand(user_question: str, lang: str, reference: str, inte
         client = OpenAI(
             base_url='https://api.groq.com/openai/v1',
             api_key=groq_key,
-            timeout=90.0,
+            timeout=_openai_http_timeout_help(),
         )
         out, err = _openai_sdk_text_chat(
             client, _groq_chat_model_id(), HELP_ASSISTANT_AI_SYSTEM, user_block, 0.2, 900,
@@ -1955,7 +2073,7 @@ def help_assistant_ai_expand(user_question: str, lang: str, reference: str, inte
         app_title = (os.environ.get('OPENROUTER_APP_TITLE') or '').strip()
         if app_title:
             headers['X-Title'] = app_title
-        kw = {'base_url': base, 'api_key': or_key, 'timeout': 90.0}
+        kw = {'base_url': base, 'api_key': or_key, 'timeout': _openai_http_timeout_help()}
         if headers:
             kw['default_headers'] = headers
         client = OpenAI(**kw)
@@ -2005,7 +2123,7 @@ def _groq_rewrite_editor_html(html_fragment, instruction, temperature=0.25):
     client = OpenAI(
         base_url='https://api.groq.com/openai/v1',
         api_key=api_key,
-        timeout=120.0,
+        timeout=_openai_http_timeout_editor(),
     )
     return _openai_sdk_rewrite_html(client, model, html_fragment, instruction, temperature)
 
@@ -2028,7 +2146,7 @@ def _openrouter_rewrite_editor_html(html_fragment, instruction, temperature=0.25
     app_title = (os.environ.get('OPENROUTER_APP_TITLE') or '').strip()
     if app_title:
         headers['X-Title'] = app_title
-    kw = {'base_url': base, 'api_key': api_key, 'timeout': 120.0}
+    kw = {'base_url': base, 'api_key': api_key, 'timeout': _openai_http_timeout_editor()}
     if headers:
         kw['default_headers'] = headers
     client = OpenAI(**kw)
@@ -2094,7 +2212,11 @@ def admin_ai_writing():
 @app.route('/admin/comments')
 @login_required
 def admin_comments():
-    rows = (Comment.query.join(Post).order_by(Comment.created_at.desc()).all())
+    rows = (
+        Comment.query.options(joinedload(Comment.post))
+        .order_by(Comment.created_at.desc())
+        .all()
+    )
     return render_template('admin/comments.html', comments=rows)
 
 

@@ -114,10 +114,15 @@ async function submitSubscribe() {
     } catch(e) {}
   }
 
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
   try {
     const res = await fetch('/subscribe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRFToken': csrf,
+      },
       body: JSON.stringify({ email, name, recaptcha_token: token })
     });
     const data = await res.json();

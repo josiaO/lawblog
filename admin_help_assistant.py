@@ -2,6 +2,8 @@
 """
 Intent-based admin help assistant (English + Kiswahili).
 Keyword matching finds the right topic; optional AI (see app.py) can polish wording for the user.
+
+This module does not access the database or build SQL — only in-memory intent scoring.
 """
 
 from __future__ import annotations

@@ -54,6 +54,7 @@
             </a>
             {% endif %}
             <form method="POST" action="{{ url_for('admin_delete_post', post_id=p.id) }}" onsubmit="return confirm('Delete this post?');" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
             </form>
           </div>
@@ -74,7 +75,16 @@
 {% block scripts %}
 <script>
 async function togglePost(id, checkbox) {
-  const res = await fetch(`/admin/posts/${id}/toggle`, { method: 'POST' });
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  const res = await fetch(`/admin/posts/${id}/toggle`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrf,
+    },
+    body: '{}',
+  });
   const data = await res.json();
   const badge = document.getElementById(`badge-${id}`);
   if (badge) {

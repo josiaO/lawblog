@@ -254,9 +254,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     try {
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       const res = await fetch('/blog/' + encodeURIComponent(slug) + '/comment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRFToken': csrf,
+        },
         body: JSON.stringify({ author_name, body, recaptcha_token: token })
       });
       const data = await res.json();
