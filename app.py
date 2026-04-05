@@ -1168,6 +1168,66 @@ def attachment_kind_filter(path):
     return attachment_kind(path)
 
 
+def _cloudinary_raw_inline_url(url: str) -> str:
+    """Prefer inline display in browser (iframe / new tab) instead of forced download."""
+    if not url or '/raw/upload/' not in url:
+        return url
+    if '/fl_inline/' in url:
+        return url
+    if '/fl_attachment/' in url:
+        return url.replace('/fl_attachment/', '/fl_inline/', 1)
+    return url.replace('/raw/upload/', '/raw/upload/fl_inline/', 1)
+
+
+def _cloudinary_raw_attachment_url(url: str) -> str:
+    """Explicit attachment delivery for Download button."""
+    if not url or '/raw/upload/' not in url:
+        return url
+    if '/fl_attachment/' in url:
+        return url
+    if '/fl_inline/' in url:
+        return url.replace('/fl_inline/', '/fl_attachment/', 1)
+    return url.replace('/raw/upload/', '/raw/upload/fl_attachment/', 1)
+
+
+def _portfolio_cv_urls(cv_stored: str):
+    """
+    (preview_iframe_url, download_href_url) for the CV PDF.
+    Cloudinary raw PDFs default to attachment; local static PDFs need explicit inline for reliable iframe embed.
+    """
+    if not cv_stored or not str(cv_stored).strip():
+        return None, None
+    s = str(cv_stored).strip()
+    if s.startswith('https://') or s.startswith('http://'):
+        return _cloudinary_raw_inline_url(s), _cloudinary_raw_attachment_url(s)
+    path = s.lstrip('/')
+    if path.startswith('static/'):
+        path = path[7:]
+    if not path.startswith('uploads/'):
+        try:
+            u = url_for('static', filename=path)
+        except BuildError:
+            u = '/static/' + path
+        return u, u
+    inner = path[len('uploads/') :]
+    if '..' in inner or inner.startswith(('/', '\\')):
+        try:
+            u = url_for('static', filename=path)
+        except BuildError:
+            u = '/static/' + path
+        return u, u
+    if not inner.lower().endswith('.pdf'):
+        dl = url_for('uploaded_file', filename=inner)
+        return dl, dl
+    try:
+        inline = url_for('uploaded_file_inline', filename=inner)
+        dl = url_for('uploaded_file', filename=inner)
+        return inline, dl
+    except BuildError:
+        u = '/static/' + path
+        return u, u
+
+
 def _next_portfolio_item_sort():
     m = db.session.query(db.func.max(PortfolioItem.sort_order)).scalar()
     return (m if m is not None else -1) + 1
@@ -1253,7 +1313,14 @@ def post(slug):
 def portfolio():
     lang = get_lang()
     portfolio_data = get_portfolio_page_data()
-    return render_template('public/portfolio.html', portfolio=portfolio_data, lang=lang)
+    cv_inline, cv_download = _portfolio_cv_urls(SiteSettings.get('cv', '') or '')
+    return render_template(
+        'public/portfolio.html',
+        portfolio=portfolio_data,
+        lang=lang,
+        cv_inline_url=cv_inline,
+        cv_download_url=cv_download,
+    )
 
 
 @app.route('/subscribe', methods=['POST'])
@@ -1323,6 +1390,31 @@ def post_comment(slug):
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+@app.route('/uploads/inline/<path:filename>')
+def uploaded_file_inline(filename):
+    """
+    Serve PDF with Content-Disposition: inline so browsers embed it instead of downloading
+    on every iframe navigation (fixes portfolio CV preview + reload loops).
+    """
+    if '..' in filename or filename.startswith(('/', '\\')):
+        abort(404)
+    if not filename.lower().endswith('.pdf'):
+        abort(404)
+    folder = os.path.normpath(app.config['UPLOAD_FOLDER'])
+    target = os.path.normpath(os.path.join(folder, filename))
+    if not target.startswith(folder + os.sep) and target != folder:
+        abort(404)
+    if not os.path.isfile(target):
+        abort(404)
+    return send_from_directory(
+        app.config['UPLOAD_FOLDER'],
+        filename,
+        mimetype='application/pdf',
+        as_attachment=False,
+        max_age=3600,
+    )
 
 
 # Help assistant: human-readable labels for suggested links (en / sw).

@@ -15,7 +15,9 @@
 </section>
 
 {% if settings.cv %}
-{% set cv_url = settings.cv|asset %}
+{# cv_inline_url / cv_download_url: inline embed + attachment (Cloudinary fl_* or /uploads/inline/ for local PDFs) #}
+{% set cv_preview = cv_inline_url or (settings.cv|asset) %}
+{% set cv_dl = cv_download_url or (settings.cv|asset) %}
 <section class="portfolio-cv-strip reveal">
   <div class="section-inner portfolio-cv-block">
     <div class="portfolio-cv-header">
@@ -29,8 +31,9 @@
     <div class="portfolio-cv-preview-wrap">
       <iframe
         class="portfolio-cv-iframe"
-        src="{{ cv_url }}"
+        src="{{ cv_preview }}"
         title="{% if lang=='en' %}CV PDF preview{% else %}Hakiki ya PDF ya CV{% endif %}"
+        loading="lazy"
       ></iframe>
     </div>
     <p class="portfolio-cv-preview-hint">
@@ -41,10 +44,10 @@
       {% endif %}
     </p>
     <div class="portfolio-cv-actions">
-      <a href="{{ cv_url }}" class="btn-primary portfolio-cv-btn" target="_blank" rel="noopener noreferrer">
+      <a href="{{ cv_preview }}" class="btn-primary portfolio-cv-btn" target="_blank" rel="noopener noreferrer">
         <i class="fas fa-external-link-alt"></i> {% if lang=='en' %}Open in new tab{% else %}Fungua kwenye kichupo kipya{% endif %}
       </a>
-      <a href="{{ cv_url }}" class="btn-primary portfolio-cv-btn portfolio-cv-btn-outline" download>
+      <a href="{{ cv_dl }}" class="btn-primary portfolio-cv-btn portfolio-cv-btn-outline"{% if cv_dl and not (cv_dl.startswith('http://') or cv_dl.startswith('https://')) %} download{% endif %}>
         <i class="fas fa-download"></i> {% if lang=='en' %}Download PDF{% else %}Pakua PDF{% endif %}
       </a>
     </div>
