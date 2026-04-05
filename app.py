@@ -10,12 +10,12 @@ from openai import OpenAI
 import markdown2
 import bleach
 from datetime import datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlparse, urlparse
 from slugify import slugify
 from dotenv import load_dotenv
 from flask import (Flask, render_template, redirect, url_for, request,
                    flash, jsonify, abort, session, send_from_directory,
-                   has_request_context, current_app)
+                   has_request_context, current_app, Response, stream_with_context)
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
 from flask_login import (LoginManager, UserMixin, login_user, logout_user,
@@ -1190,6 +1190,25 @@ def _cloudinary_raw_attachment_url(url: str) -> str:
     return url.replace('/raw/upload/', '/raw/upload/fl_attachment/', 1)
 
 
+def _cv_should_proxy_cloudinary_pdf(url: str) -> bool:
+    """
+    True when CV is a Cloudinary *raw* PDF — proxy through our app so visitors whose browsers
+    cannot reach res.cloudinary.com (DNS, firewall, extensions) still get the file from our domain.
+    Restricted to res.cloudinary.com + /raw/upload/ to avoid open proxy abuse (admin-controlled URL only).
+    """
+    try:
+        p = urlparse(url)
+    except (TypeError, ValueError):
+        return False
+    if (p.scheme or '').lower() not in ('http', 'https'):
+        return False
+    if (p.hostname or '').lower() != 'res.cloudinary.com':
+        return False
+    if '/raw/upload/' not in url:
+        return False
+    return True
+
+
 def _portfolio_cv_urls(cv_stored: str):
     """
     (preview_iframe_url, download_href_url) for the CV PDF.
@@ -1199,6 +1218,11 @@ def _portfolio_cv_urls(cv_stored: str):
         return None, None
     s = str(cv_stored).strip()
     if s.startswith('https://') or s.startswith('http://'):
+        if _cv_should_proxy_cloudinary_pdf(s):
+            try:
+                return url_for('public_cv_pdf'), url_for('public_cv_pdf', download=1)
+            except BuildError:
+                pass
         return _cloudinary_raw_inline_url(s), _cloudinary_raw_attachment_url(s)
     path = s.lstrip('/')
     if path.startswith('static/'):
@@ -1320,6 +1344,60 @@ def portfolio():
         lang=lang,
         cv_inline_url=cv_inline,
         cv_download_url=cv_download,
+    )
+
+
+@app.route('/portfolio/cv-file')
+def public_cv_pdf():
+    """
+    Stream the site CV PDF from Cloudinary through this origin.
+    Visitors who cannot reach res.cloudinary.com (blocked DNS/firewall) can still view/download
+    the résumé because only the app server fetches Cloudinary.
+    """
+    cv = (SiteSettings.get('cv') or '').strip()
+    if not cv.startswith(('http://', 'https://')):
+        abort(404)
+    if not _cv_should_proxy_cloudinary_pdf(cv):
+        abort(404)
+    arg_dl = request.args.get('download')
+    want_dl = str(arg_dl).lower() in ('1', 'true', 'yes')
+    fetch_url = _cloudinary_raw_attachment_url(cv) if want_dl else _cloudinary_raw_inline_url(cv)
+    try:
+        upstream = requests.get(
+            fetch_url,
+            timeout=60,
+            stream=True,
+            headers={'User-Agent': 'Lawblog-CV-Proxy/1.0'},
+        )
+    except requests.RequestException:
+        app.logger.exception('CV proxy: request to Cloudinary failed')
+        abort(502)
+    if upstream.status_code != 200:
+        upstream.close()
+        app.logger.warning(
+            'CV proxy: Cloudinary returned HTTP %s for %s',
+            upstream.status_code,
+            fetch_url[:120],
+        )
+        abort(502)
+
+    disposition = 'attachment' if want_dl else 'inline'
+
+    def generate():
+        try:
+            for chunk in upstream.iter_content(chunk_size=65536):
+                if chunk:
+                    yield chunk
+        finally:
+            upstream.close()
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='application/pdf',
+        headers={
+            'Content-Disposition': f'{disposition}; filename="cv.pdf"',
+            'Cache-Control': 'public, max-age=120',
+        },
     )
 
 
