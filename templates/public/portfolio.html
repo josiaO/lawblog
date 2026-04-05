@@ -15,22 +15,39 @@
 </section>
 
 {% if settings.cv %}
+{% set cv_url = settings.cv|asset %}
 <section class="portfolio-cv-strip reveal">
-  <div class="section-inner portfolio-cv-inner">
-    <div class="portfolio-cv-copy">
-      <span class="portfolio-cv-label">{% if lang=='en' %}Curriculum vitae{% else %}Wasifu{% endif %}</span>
-      <h2 class="portfolio-cv-title">{% if lang=='en' %}Download full CV (PDF){% else %}Pakua CV kamili (PDF){% endif %}</h2>
-      <p class="portfolio-cv-desc">{% if lang=='en' %}Official résumé with education, experience, and contact.{% else %}Wasifu rasmi: elimu, uzoefu, na mawasiliano.{% endif %}</p>
-      <div class="portfolio-cv-actions">
-        <a href="{{ settings.cv|asset }}" class="btn-primary portfolio-cv-btn" target="_blank" rel="noopener">
-          <i class="fas fa-eye"></i> {% if lang=='en' %}View PDF{% else %}Angalia PDF{% endif %}
-        </a>
-        <a href="{{ settings.cv|asset }}" class="btn-primary portfolio-cv-btn portfolio-cv-btn-outline" download>
-          <i class="fas fa-download"></i> {% if lang=='en' %}Download{% else %}Pakua{% endif %}
-        </a>
+  <div class="section-inner portfolio-cv-block">
+    <div class="portfolio-cv-header">
+      <div class="portfolio-cv-copy">
+        <span class="portfolio-cv-label">{% if lang=='en' %}Curriculum vitae{% else %}Wasifu{% endif %}</span>
+        <h2 class="portfolio-cv-title">{% if lang=='en' %}Résumé (PDF){% else %}Wasifu (PDF){% endif %}</h2>
+        <p class="portfolio-cv-desc">{% if lang=='en' %}Preview below. Open in a new tab for a larger view, or download a copy when you need a file.{% else %}Hakiki hapa chini. Fungua kwenye kichupo kipya kwa skrini kubwa, au pakua nakala unapohitaji faili.{% endif %}</p>
       </div>
+      <div class="portfolio-cv-icon" aria-hidden="true"><i class="fas fa-file-pdf"></i></div>
     </div>
-    <div class="portfolio-cv-icon" aria-hidden="true"><i class="fas fa-file-pdf"></i></div>
+    <div class="portfolio-cv-preview-wrap">
+      <iframe
+        class="portfolio-cv-iframe"
+        src="{{ cv_url }}"
+        title="{% if lang=='en' %}CV PDF preview{% else %}Hakiki ya PDF ya CV{% endif %}"
+      ></iframe>
+    </div>
+    <p class="portfolio-cv-preview-hint">
+      {% if lang=='en' %}
+      If the preview does not appear (some browsers block embedded PDFs), use <strong>Open in new tab</strong>.
+      {% else %}
+      Ikiwa hakiki haionekani (kivinjari kinazuia PDF ndani ya ukurasa), tumia <strong>Fungua kwenye kichupo kipya</strong>.
+      {% endif %}
+    </p>
+    <div class="portfolio-cv-actions">
+      <a href="{{ cv_url }}" class="btn-primary portfolio-cv-btn" target="_blank" rel="noopener noreferrer">
+        <i class="fas fa-external-link-alt"></i> {% if lang=='en' %}Open in new tab{% else %}Fungua kwenye kichupo kipya{% endif %}
+      </a>
+      <a href="{{ cv_url }}" class="btn-primary portfolio-cv-btn portfolio-cv-btn-outline" download>
+        <i class="fas fa-download"></i> {% if lang=='en' %}Download PDF{% else %}Pakua PDF{% endif %}
+      </a>
+    </div>
   </div>
 </section>
 {% endif %}

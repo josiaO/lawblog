@@ -113,6 +113,7 @@
   }
 
   function renderChips() {
+    if (!chipsEl) return;
     chipsEl.innerHTML = '';
     chips.forEach(function (c) {
       var b = document.createElement('button');

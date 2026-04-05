@@ -30,12 +30,11 @@
 <!-- ── Navigation ── -->
 <nav class="site-nav" id="siteNav">
   <div class="nav-inner">
-    <a href="{{ url_for('index') }}" class="nav-logo">
+    <a href="{{ url_for('index') }}" class="nav-logo{% if settings.logo %} nav-logo--with-image{% endif %}">
       {% if settings.logo %}
-        <img src="{{ settings.logo|asset }}" alt="{{ settings.name }}" class="logo-img" />
-      {% else %}
-        <span class="logo-text">{{ settings.name }}</span>
+        <img src="{{ settings.logo|asset }}" alt="" class="logo-img" width="160" height="48" decoding="async" />
       {% endif %}
+      <span class="logo-text{% if settings.logo %} logo-text--with-mark{% endif %}">{{ settings.name }}</span>
     </a>
 
     <ul class="nav-links">
@@ -132,6 +131,9 @@
 <footer class="site-footer">
   <div class="footer-inner">
     <div class="footer-brand">
+      {% if settings.logo %}
+      <img src="{{ settings.logo|asset }}" alt="" class="footer-logo-img" width="120" height="40" decoding="async" />
+      {% endif %}
       <span class="footer-name">{{ settings.name }}</span>
       <p class="footer-tagline">{{ settings.tagline_en if lang=='en' else settings.tagline_fr }}</p>
     </div>

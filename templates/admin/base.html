@@ -1,6 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Admin{% endblock %} — Counsel & Craft</title>
@@ -73,7 +83,13 @@
         <i class="fas fa-bars"></i>
       </button>
       <div class="admin-header-title">{% block page_title %}{% endblock %}</div>
-      <div class="admin-header-actions">{% block header_actions %}{% endblock %}</div>
+      <div class="admin-header-actions">
+        <button type="button" class="admin-theme-toggle" id="adminThemeToggle" aria-label="Toggle theme" title="Toggle theme">
+          <span class="admin-theme-icon admin-theme-icon--sun" aria-hidden="true">☀</span>
+          <span class="admin-theme-icon admin-theme-icon--moon" aria-hidden="true">☾</span>
+        </button>
+        {% block header_actions %}{% endblock %}
+      </div>
     </header>
 
     <div class="admin-content">
@@ -117,7 +133,10 @@
         </div>
       </div>
       <div id="adminHelpMessages" class="admin-help-messages"></div>
-      <div id="adminHelpChips" class="admin-help-chips"></div>
+      <details class="admin-help-chips-details">
+        <summary class="admin-help-chips-summary" data-i18n-en="Suggested questions" data-i18n-sw="Maswali ya mapendekezo"></summary>
+        <div id="adminHelpChips" class="admin-help-chips"></div>
+      </details>
       <form id="adminHelpForm" class="admin-help-form">
         <input type="text" id="adminHelpInput" name="q" autocomplete="off" maxlength="500" />
         <button type="submit" class="admin-help-send btn btn-gold btn-sm" data-i18n-en="Send" data-i18n-sw="Tuma"></button>
@@ -129,6 +148,10 @@
   </div>
 </div>
 {% else %}
+<button type="button" class="admin-theme-toggle admin-theme-toggle--floating" id="adminThemeToggle" aria-label="Toggle theme" title="Toggle theme">
+  <span class="admin-theme-icon admin-theme-icon--sun" aria-hidden="true">☀</span>
+  <span class="admin-theme-icon admin-theme-icon--moon" aria-hidden="true">☾</span>
+</button>
 {% block auth_content %}{% endblock %}
 {% endif %}
 
