@@ -1192,9 +1192,9 @@ def _cloudinary_raw_attachment_url(url: str) -> str:
 
 def _cv_should_proxy_cloudinary_pdf(url: str) -> bool:
     """
-    True when CV is a Cloudinary *raw* PDF — proxy through our app so visitors whose browsers
-    cannot reach res.cloudinary.com (DNS, firewall, extensions) still get the file from our domain.
-    Restricted to res.cloudinary.com + /raw/upload/ to avoid open proxy abuse (admin-controlled URL only).
+    True when CV is delivered from Cloudinary — proxy through our app so visitors whose browsers
+    cannot reach res.cloudinary.com still get the file from our domain.
+    Admin-controlled URL only; host must be res.cloudinary.com with a standard /upload/ delivery path.
     """
     try:
         p = urlparse(url)
@@ -1204,9 +1204,11 @@ def _cv_should_proxy_cloudinary_pdf(url: str) -> bool:
         return False
     if (p.hostname or '').lower() != 'res.cloudinary.com':
         return False
-    if '/raw/upload/' not in url:
-        return False
-    return True
+    path = (p.path or '').lower()
+    # Raw PDFs use /raw/upload/; misconfigured uploads might use /image/upload/…pdf
+    if '/raw/upload/' in path or '/image/upload/' in path:
+        return True
+    return False
 
 
 def _portfolio_cv_urls(cv_stored: str):
@@ -1347,12 +1349,23 @@ def portfolio():
     )
 
 
+# Browser-like UA: some CDNs return 403/empty for non-browser clients on delivery URLs.
+_CV_PROXY_UA = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+    'Chrome/120.0.0.0 Safari/537.36'
+)
+
+
 @app.route('/portfolio/cv-file')
 def public_cv_pdf():
     """
     Stream the site CV PDF from Cloudinary through this origin.
     Visitors who cannot reach res.cloudinary.com (blocked DNS/firewall) can still view/download
     the résumé because only the app server fetches Cloudinary.
+
+    Fetches the exact URL stored in settings (no fl_inline/fl_attachment rewriting). Those
+    URL edits often break raw delivery and caused 4xx from Cloudinary surfaced as 502 here.
+    Inline vs download is controlled only by this response's Content-Disposition.
     """
     cv = (SiteSettings.get('cv') or '').strip()
     if not cv.startswith(('http://', 'https://')):
@@ -1361,13 +1374,17 @@ def public_cv_pdf():
         abort(404)
     arg_dl = request.args.get('download')
     want_dl = str(arg_dl).lower() in ('1', 'true', 'yes')
-    fetch_url = _cloudinary_raw_attachment_url(cv) if want_dl else _cloudinary_raw_inline_url(cv)
+    fetch_url = cv
     try:
         upstream = requests.get(
             fetch_url,
-            timeout=60,
+            timeout=90,
             stream=True,
-            headers={'User-Agent': 'Lawblog-CV-Proxy/1.0'},
+            allow_redirects=True,
+            headers={
+                'User-Agent': _CV_PROXY_UA,
+                'Accept': 'application/pdf,*/*;q=0.8',
+            },
         )
     except requests.RequestException:
         app.logger.exception('CV proxy: request to Cloudinary failed')
@@ -1375,9 +1392,9 @@ def public_cv_pdf():
     if upstream.status_code != 200:
         upstream.close()
         app.logger.warning(
-            'CV proxy: Cloudinary returned HTTP %s for %s',
+            'CV proxy: upstream HTTP %s for %s',
             upstream.status_code,
-            fetch_url[:120],
+            fetch_url[:160],
         )
         abort(502)
 
