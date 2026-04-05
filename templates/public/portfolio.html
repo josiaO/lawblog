@@ -9,50 +9,103 @@
       {% if lang=='en' %}Work & Achievements{% else %}Kazi & Mafanikio{% endif %}
     </h1>
     <p class="animate-fade-up delay-2" style="color:var(--text-2); max-width:560px; font-size:1.05rem; line-height:1.8;">
-      {% if lang=='en' %}
-        A collection of academic papers, advocacy work, and published pieces that reflect a commitment to justice, youth empowerment, and the law.
-      {% else %}
-        Mkusanyiko wa kazi za kitaaluma, ulinzi, na machapisho yanayoonyesha kujitolea kwa haki na vijana.
-      {% endif %}
+      {% if lang=='en' %}{{ portfolio.intro_en }}{% else %}{{ portfolio.intro_sw }}{% endif %}
     </p>
   </div>
 </section>
 
+{% if settings.cv %}
+<section class="portfolio-cv-strip reveal">
+  <div class="section-inner portfolio-cv-inner">
+    <div class="portfolio-cv-copy">
+      <span class="portfolio-cv-label">{% if lang=='en' %}Curriculum vitae{% else %}Wasifu{% endif %}</span>
+      <h2 class="portfolio-cv-title">{% if lang=='en' %}Download full CV (PDF){% else %}Pakua CV kamili (PDF){% endif %}</h2>
+      <p class="portfolio-cv-desc">{% if lang=='en' %}Official résumé with education, experience, and contact.{% else %}Wasifu rasmi: elimu, uzoefu, na mawasiliano.{% endif %}</p>
+      <div class="portfolio-cv-actions">
+        <a href="{{ settings.cv|asset }}" class="btn-primary portfolio-cv-btn" target="_blank" rel="noopener">
+          <i class="fas fa-eye"></i> {% if lang=='en' %}View PDF{% else %}Angalia PDF{% endif %}
+        </a>
+        <a href="{{ settings.cv|asset }}" class="btn-primary portfolio-cv-btn portfolio-cv-btn-outline" download>
+          <i class="fas fa-download"></i> {% if lang=='en' %}Download{% else %}Pakua{% endif %}
+        </a>
+      </div>
+    </div>
+    <div class="portfolio-cv-icon" aria-hidden="true"><i class="fas fa-file-pdf"></i></div>
+  </div>
+</section>
+{% endif %}
+
 <div class="section" style="padding-top:0;">
   <div class="section-inner">
 
-    <!-- Sample portfolio items — admin can update via settings or future portfolio model -->
     <div class="portfolio-grid">
-      {% for item in [
-        ('📜', 'Academic Research', 'Utafiti wa Kitaaluma', 'Constitutional Law & Youth Rights', 'Sheria ya Katiba & Haki za Vijana', 'Exploring the intersection of constitutional protections and the legal status of youth in modern democratic systems.', 'Kuchunguza jinsi ulinzi wa katiba unavyokutana na hali ya kisheria ya vijana katika mifumo ya kidemokrasia ya kisasa.', '2024'),
-        ('✍', 'Published Essay', 'Makala Iliyochapishwa', 'The Pen and the Gavel', 'Kalamu na Nyundo', 'A meditation on how writing shapes legal thought and how legal thought shapes our world. Published in the student law review.', 'Tafakari juu ya jinsi uandishi unavyounda mawazo ya kisheria na jinsi mawazo hayo yanavyounda ulimwengu wetu.', '2024'),
-        ('🏛', 'Moot Court', 'Mahakama ya Mazoezi', 'Regional Moot Court Competition', 'Mashindano ya Kanda ya Mahakama ya Mazoezi', 'Represented the law faculty in regional competition. Argued a landmark case on digital privacy rights for minors.', 'Kuwakilisha chuo cha sheria katika mashindano ya kanda. Kujadili kesi muhimu kuhusu faragha ya kidijitali kwa walio chini ya miaka.', '2023'),
-        ('✊', 'Advocacy', 'Ulinzi', 'Youth Legal Aid Initiative', 'Mpango wa Msaada wa Kisheria kwa Vijana', 'Co-founded a campus initiative providing basic legal information to underprivileged youth in the community.', 'Kuunda pamoja mpango wa chuo unaotoa taarifa za msingi za kisheria kwa vijana walio katika hali ngumu.', '2023'),
-        ('🎤', 'Speaking', 'Hotuba', 'TEDx Campus Talk', 'Hotuba ya TEDx Chuo', 'Delivered a talk on "Why Young People Should Care About the Law" to an audience of 300+ students.', 'Kutoa hotuba kuhusu "Kwa nini vijana wapaswa kujali sheria" kwa wasikilizaji zaidi ya 300.', '2023'),
-        ('📰', 'Op-Ed', 'Maoni', 'National Youth Justice Op-Ed', 'Maoni ya Kitaifa kuhusu Haki kwa Vijana', 'Published opinion piece arguing for reform of juvenile justice systems in the national student newspaper.', 'Makala ya maoni iliyochapishwa inayopendekeza mabadiliko katika mifumo ya haki kwa vijana kwenye gazeti la wanafunzi.', '2022'),
-      ] %}
-      <div class="portfolio-item reveal">
-        <div class="portfolio-icon">{{ item[0] }}</div>
-        <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:0.4rem;">
-          {{ item[1] if lang=='en' else item[2] }}
+      {% for item in portfolio.work_items %}
+      <article class="portfolio-item portfolio-item-rich reveal">
+        {% if item.image %}
+        <div class="portfolio-item-visual">
+          <img src="{{ item.image|asset }}" alt="" loading="lazy" width="600" height="340" />
         </div>
-        <h3 class="portfolio-title">{{ item[3] if lang=='en' else item[4] }}</h3>
-        <p class="portfolio-desc">{{ item[5] if lang=='en' else item[6] }}</p>
-        <div class="portfolio-year">{{ item[7] }}</div>
-      </div>
+        {% endif %}
+        <div class="portfolio-item-body">
+          <div class="portfolio-icon">{{ item.icon or '📌' }}</div>
+          <div class="portfolio-cat">
+            {{ item.category_en if lang=='en' else (item.category_sw or item.category_en) }}
+          </div>
+          <h3 class="portfolio-title">{{ item.title_en if lang=='en' else (item.title_sw or item.title_en) }}</h3>
+          <p class="portfolio-desc">{{ item.desc_en if lang=='en' else (item.desc_sw or item.desc_en) }}</p>
+          {% if item.year %}<div class="portfolio-year">{{ item.year }}</div>{% endif %}
+        </div>
+      </article>
       {% endfor %}
     </div>
 
-    {% if settings.cv %}
-    <div class="reveal" style="text-align:center; margin-top: 4rem;">
-      <p style="color:var(--text-2); margin-bottom:1.5rem;">
-        {% if lang=='en' %}Want the full picture?{% else %}Unataka picha kamili?{% endif %}
-      </p>
-      <a href="{{ settings.cv|asset }}" class="btn-primary" download>
-        <i class="fas fa-file-pdf"></i>
-        {% if lang=='en' %}Download Full CV{% else %}Pakua CV kamili{% endif %}
-      </a>
+    {% if portfolio.awards %}
+    <div class="portfolio-awards-block">
+      <h2 class="section-title portfolio-awards-heading reveal">
+        {% if lang=='en' %}Certificates, awards & achievements{% else %}Vyeti, tuzo & mafanikio{% endif %}
+      </h2>
+      <div class="portfolio-awards-grid">
+        {% for c in portfolio.awards %}
+        <article class="portfolio-award-card reveal">
+          {% if c.attachment %}
+            {% set ak = c.attachment|attachment_kind %}
+            {% if ak == 'image' %}
+            <a href="{{ c.attachment|asset }}" class="portfolio-award-thumb" target="_blank" rel="noopener">
+              <img src="{{ c.attachment|asset }}" alt="" loading="lazy" />
+            </a>
+            {% elif ak == 'pdf' %}
+            <a href="{{ c.attachment|asset }}" class="portfolio-award-doc" target="_blank" rel="noopener">
+              <span class="portfolio-award-doc-icon"><i class="fas fa-file-pdf"></i></span>
+              <span class="portfolio-award-doc-text">{% if lang=='en' %}View certificate (PDF){% else %}Angalia cheti (PDF){% endif %}</span>
+            </a>
+            {% else %}
+            <a href="{{ c.attachment|asset }}" class="portfolio-award-doc" target="_blank" rel="noopener">
+              <span class="portfolio-award-doc-icon"><i class="fas fa-file-alt"></i></span>
+              <span class="portfolio-award-doc-text">{% if lang=='en' %}Open file{% else %}Fungua faili{% endif %}</span>
+            </a>
+            {% endif %}
+          {% else %}
+          <div class="portfolio-award-placeholder"><span>{{ c.icon or '🏅' }}</span></div>
+          {% endif %}
+          <div class="portfolio-award-body">
+            <div class="portfolio-award-icon">{{ c.icon or '🏅' }}</div>
+            <h3 class="portfolio-award-title">{{ c.title_en if lang=='en' else (c.title_sw or c.title_en) }}</h3>
+            <p class="portfolio-desc">{{ c.detail_en if lang=='en' else (c.detail_sw or c.detail_en) }}</p>
+            {% if c.year %}<div class="portfolio-year">{{ c.year }}</div>{% endif %}
+            {% if c.attachment %}
+            <a href="{{ c.attachment|asset }}" class="portfolio-award-link" target="_blank" rel="noopener" download>
+              <i class="fas fa-paperclip"></i> {% if lang=='en' %}Download attachment{% else %}Pakua kiambatanisho{% endif %}
+            </a>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
     </div>
+    {% endif %}
+
+    {% if not settings.cv and not portfolio.work_items and not portfolio.awards %}
+    <p class="reveal" style="text-align:center;color:var(--text-3);padding:3rem 1rem;">{% if lang=='en' %}Portfolio content coming soon.{% else %}Maudhui ya portfolio yanakuja hivi karibuni.{% endif %}</p>
     {% endif %}
 
   </div>

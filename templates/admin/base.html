@@ -36,6 +36,15 @@
       <a href="{{ url_for('admin_comments') }}" class="sidebar-link {% if request.endpoint in ('admin_comments','admin_delete_comment') %}active{% endif %}">
         <i class="fas fa-comments"></i> Comments
       </a>
+      <a href="{{ url_for('admin_portfolio') }}" class="sidebar-link {% if request.endpoint=='admin_portfolio' %}active{% endif %}">
+        <i class="fas fa-briefcase"></i> Portfolio
+      </a>
+      <button type="button" class="sidebar-link sidebar-link-btn" id="adminHelpFromSidebar" title="Open help assistant">
+        <i class="fas fa-robot"></i> Help assistant
+      </button>
+      <a href="{{ url_for('admin_broadcast') }}" class="sidebar-link {% if request.endpoint=='admin_broadcast' %}active{% endif %}">
+        <i class="fas fa-bullhorn"></i> Email subscribers
+      </a>
       <a href="{{ url_for('admin_settings') }}" class="sidebar-link {% if request.endpoint=='admin_settings' %}active{% endif %}">
         <i class="fas fa-cog"></i> Site Settings
       </a>
@@ -80,12 +89,53 @@
       {% block content %}{% endblock %}
     </div>
   </div>
+
+  <div
+    id="adminHelpAssistantRoot"
+    class="admin-help-root"
+    data-config-url="{{ url_for('admin_help_assistant_config') }}"
+    data-chat-url="{{ url_for('admin_help_assistant_chat') }}"
+  >
+    <div
+      id="adminHelpAssistantPanel"
+      class="admin-help-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="adminHelpAssistantTitle"
+      hidden
+    >
+      <div class="admin-help-panel-head">
+        <div>
+          <div id="adminHelpAssistantTitle" class="admin-help-panel-title">Help assistant</div>
+          <div class="admin-help-panel-sub" data-i18n-en="Simple guides for this site — English or Kiswahili" data-i18n-sw="Miongozo rahisi — Kiingereza au Kiswahili"></div>
+        </div>
+        <div class="admin-help-panel-tools">
+          <span class="admin-help-lang-label" data-i18n-en="Language:" data-i18n-sw="Lugha:"></span>
+          <button type="button" class="admin-help-lang-btn active" id="adminHelpLangEn" data-lang="en">EN</button>
+          <button type="button" class="admin-help-lang-btn" id="adminHelpLangSw" data-lang="sw">SW</button>
+          <button type="button" class="admin-help-close" id="adminHelpClose" aria-label="Close">&times;</button>
+        </div>
+      </div>
+      <div id="adminHelpMessages" class="admin-help-messages"></div>
+      <div id="adminHelpChips" class="admin-help-chips"></div>
+      <form id="adminHelpForm" class="admin-help-form">
+        <input type="text" id="adminHelpInput" name="q" autocomplete="off" maxlength="500" />
+        <button type="submit" class="admin-help-send btn btn-gold btn-sm" data-i18n-en="Send" data-i18n-sw="Tuma"></button>
+      </form>
+    </div>
+    <button type="button" class="admin-help-fab" id="adminHelpFab" aria-label="Open help assistant" aria-expanded="false">
+      <i class="fas fa-robot" aria-hidden="true"></i>
+    </button>
+  </div>
 </div>
 {% else %}
 {% block auth_content %}{% endblock %}
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% if current_user.is_authenticated %}
+<script src="{{ url_for('static', filename='js/admin_help_chat.js') }}"></script>
+{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

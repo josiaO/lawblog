@@ -4,6 +4,9 @@
 {% block page_title %}{{ 'Edit Post' if post else 'New Post' }}{% endblock %}
 
 {% block head %}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lato:ital,wght@0,400;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Open+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Roboto:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
 <style>
 /* Post editor layout: writing tools | main | publish sidebar */
@@ -128,6 +131,43 @@
   color: var(--accent);
 }
 
+.writing-font-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+.writing-font-chip {
+  font-size: 0.65rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text-2);
+  cursor: pointer;
+  line-height: 1.2;
+  transition: border-color 0.15s, color 0.15s;
+}
+.writing-font-chip:hover {
+  border-color: var(--border-accent);
+  color: var(--accent);
+}
+.writing-tools-fonts details summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.writing-tools-fonts details summary::-webkit-details-marker { display: none; }
+.writing-tools-fonts details ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.68rem;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
 /* Quill — dark admin theme */
 .quill-wrap {
   border-radius: 8px;
@@ -161,6 +201,44 @@
   height: 36px !important;
   font-size: 14px !important;
 }
+.quill-wrap .ql-toolbar .ql-picker.ql-font {
+  min-width: 9.5rem !important;
+  width: auto !important;
+  max-width: 12rem;
+}
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label {
+  padding: 4px 8px !important;
+}
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item::before {
+  content: 'Font';
+  font-family: inherit;
+}
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=opensans]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=opensans]::before { content: 'Open Sans'; font-family: 'Open Sans', sans-serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=roboto]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=roboto]::before { content: 'Roboto'; font-family: 'Roboto', sans-serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=lato]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=lato]::before { content: 'Lato'; font-family: 'Lato', sans-serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=poppins]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=poppins]::before { content: 'Poppins'; font-family: 'Poppins', sans-serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=montserrat]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=montserrat]::before { content: 'Montserrat'; font-family: 'Montserrat', sans-serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=figtree]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=figtree]::before { content: 'Figtree'; font-family: 'Figtree', sans-serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=lora]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=lora]::before { content: 'Lora'; font-family: 'Lora', serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=librebaskerville]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=librebaskerville]::before { content: 'Libre Baskerville'; font-family: 'Libre Baskerville', serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=playfair]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=playfair]::before { content: 'Playfair Display'; font-family: 'Playfair Display', serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=alegreya]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=alegreya]::before { content: 'Alegreya'; font-family: 'Alegreya', serif; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label[data-value=false]::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item[data-value=false]::before { content: 'Default'; }
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-label:not([data-value])::before,
+.quill-wrap .ql-toolbar .ql-picker.ql-font .ql-picker-item:not([data-value])::before { content: 'Default'; }
+
 .quill-wrap .ql-toolbar .ql-picker-label {
   padding: 4px 6px !important;
 }
@@ -192,6 +270,18 @@
   color: #6b6980;
   font-style: normal;
 }
+/* Quill inline font classes (must match Quill Font whitelist) */
+.quill-wrap .ql-editor .ql-font-opensans { font-family: 'Open Sans', system-ui, sans-serif; }
+.quill-wrap .ql-editor .ql-font-roboto { font-family: 'Roboto', system-ui, sans-serif; }
+.quill-wrap .ql-editor .ql-font-lato { font-family: 'Lato', system-ui, sans-serif; }
+.quill-wrap .ql-editor .ql-font-poppins { font-family: 'Poppins', system-ui, sans-serif; }
+.quill-wrap .ql-editor .ql-font-montserrat { font-family: 'Montserrat', system-ui, sans-serif; }
+.quill-wrap .ql-editor .ql-font-figtree { font-family: 'Figtree', system-ui, sans-serif; }
+.quill-wrap .ql-editor .ql-font-lora { font-family: 'Lora', Georgia, serif; }
+.quill-wrap .ql-editor .ql-font-librebaskerville { font-family: 'Libre Baskerville', Georgia, serif; }
+.quill-wrap .ql-editor .ql-font-playfair { font-family: 'Playfair Display', Georgia, serif; }
+.quill-wrap .ql-editor .ql-font-alegreya { font-family: 'Alegreya', Georgia, serif; }
+
 .quill-wrap .ql-editor h1 { font-family: var(--font-display); font-size: 1.75rem; color: #e8e6f0; margin: 1em 0 0.5em; }
 .quill-wrap .ql-editor h2 { font-family: var(--font-display); font-size: 1.4rem; color: #e8e6f0; margin: 1em 0 0.5em; }
 .quill-wrap .ql-editor h3 { font-size: 1.15rem; color: #e8e6f0; margin: 1em 0 0.5em; }
@@ -310,11 +400,12 @@
           <div class="writing-tools-card" style="border:none;padding:0;background:transparent;">
             <h3>AI writing tools</h3>
             <p class="form-hint" style="margin-bottom:0.75rem;font-size:0.72rem;">
-              Improves the <strong>active</strong> tab. Uses the first available provider:
-              <code style="font-size:0.65rem;">GEMINI_API_KEY</code> →
-              <code style="font-size:0.65rem;">XAI_API_KEY</code> →
-              <code style="font-size:0.65rem;">OPENROUTER_API_KEY</code> (defaults to Gemini on OpenRouter).
-              Keys can be <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini (free)</a>, Grok, or OpenRouter.
+              Works on the <strong>active</strong> tab. <strong>Highlight text</strong> first to fix only that part
+              (recommended for grammar). With no selection, the whole article is sent, but the model is instructed
+              to edit conservatively—not replace it with a new draft. Uses <code style="font-size:0.65rem;">GROQ_API_KEY</code>
+              then <code style="font-size:0.65rem;">OPENROUTER_API_KEY</code>.
+              Keys: <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq</a>,
+              <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a>.
             </p>
             <button type="button" class="writing-tool-btn ai" data-ai="improve" title="Clarity and flow">
               ✨ Improve writing
@@ -331,6 +422,39 @@
             <button type="button" class="writing-tool-btn insert" data-insert="section">＋ Section heading</button>
             <button type="button" class="writing-tool-btn insert" data-insert="quote">＋ Quote block</button>
             <button type="button" class="writing-tool-btn insert" data-insert="example">＋ Example line</button>
+          </div>
+          <div class="writing-tools-card writing-tools-fonts" style="border:none;padding:0;background:transparent;">
+            <h3>Writing fonts</h3>
+            <p class="form-hint" style="margin-bottom:0.65rem;font-size:0.7rem;line-height:1.5;">
+              Use the <strong>Font</strong> dropdown in the editor toolbar, or tap a name below. Put the cursor in text (or select a paragraph) first — then your typing uses that font until you change it.
+            </p>
+            <p style="font-size:0.62rem;color:var(--text-3);margin:0 0 0.35rem;text-transform:uppercase;letter-spacing:0.07em;">Sans — great for body</p>
+            <div class="writing-font-chips">
+              <button type="button" class="writing-font-chip" data-font="opensans">Open Sans</button>
+              <button type="button" class="writing-font-chip" data-font="roboto">Roboto</button>
+              <button type="button" class="writing-font-chip" data-font="lato">Lato</button>
+              <button type="button" class="writing-font-chip" data-font="poppins">Poppins</button>
+              <button type="button" class="writing-font-chip" data-font="montserrat">Montserrat</button>
+              <button type="button" class="writing-font-chip" data-font="figtree">Figtree</button>
+            </div>
+            <p style="font-size:0.62rem;color:var(--text-3);margin:0 0 0.35rem;text-transform:uppercase;letter-spacing:0.07em;">Serif — headings &amp; elegant body</p>
+            <div class="writing-font-chips">
+              <button type="button" class="writing-font-chip" data-font="lora">Lora</button>
+              <button type="button" class="writing-font-chip" data-font="librebaskerville">Libre Baskerville</button>
+              <button type="button" class="writing-font-chip" data-font="playfair">Playfair Display</button>
+              <button type="button" class="writing-font-chip" data-font="alegreya">Alegreya</button>
+            </div>
+            <button type="button" class="writing-font-chip" data-font="" style="margin-top:0.25rem;">Default (site style)</button>
+            <details style="margin-top:0.85rem;">
+              <summary>Tips &amp; best pairings</summary>
+              <ul>
+                <li><strong>Legibility:</strong> pick fonts that stay easy to read on a phone, not only on a large screen.</li>
+                <li><strong>Keep it simple:</strong> one style for headings and one for body text usually looks cleanest.</li>
+                <li><strong>Speed:</strong> these fonts load from Google so pages stay fast.</li>
+                <li><strong>Personality:</strong> sans fonts feel modern; serifs feel classic or premium.</li>
+                <li><strong>Pairings:</strong> Montserrat headings + Open Sans body · Playfair Display headings + Lato body · Roboto headings + Lora body.</li>
+              </ul>
+            </details>
           </div>
         </div>
       </details>
@@ -465,7 +589,16 @@
 <script>
 var quillEn, quillSw;
 
+var WRITING_FONT_WHITELIST = [
+  'opensans', 'roboto', 'lato', 'poppins', 'montserrat', 'figtree',
+  'lora', 'librebaskerville', 'playfair', 'alegreya',
+];
+var FontAttributor = Quill.import('formats/font');
+FontAttributor.whitelist = WRITING_FONT_WHITELIST;
+Quill.register(FontAttributor, true);
+
 var toolbarOptions = [
+  [{ font: [false].concat(WRITING_FONT_WHITELIST) }],
   [{ header: [1, 2, 3, false] }],
   ['bold', 'italic', 'underline', 'strike'],
   ['blockquote', 'code-block'],
@@ -599,21 +732,73 @@ function setAiLoading(on) {
   });
 }
 
+/** Build { scope, content, index, length } for AI: selection if Quill has a range, else full body. */
+function buildAiPayload(quill) {
+  quill.focus();
+  var range = quill.getSelection(true);
+  if (range && range.length > 0) {
+    var domSel = window.getSelection();
+    if (domSel && domSel.rangeCount > 0 && !domSel.isCollapsed) {
+      var r0 = domSel.getRangeAt(0);
+      if (quill.root.contains(r0.commonAncestorContainer)) {
+        var wrap = document.createElement('div');
+        wrap.appendChild(r0.cloneContents());
+        var html = (wrap.innerHTML || '').trim();
+        if (html.length) {
+          return {
+            scope: 'selection',
+            content: html,
+            index: range.index,
+            length: range.length,
+          };
+        }
+      }
+    }
+    var plain = quill.getText(range.index, range.length).trim();
+    if (plain.length) {
+      var paras = plain.split(/\n+/).map(function(line) {
+        return '<p>' + escapeHtml(line) + '</p>';
+      }).join('');
+      return {
+        scope: 'selection',
+        content: paras,
+        index: range.index,
+        length: range.length,
+      };
+    }
+  }
+  return {
+    scope: 'full',
+    content: quill.root.innerHTML,
+    index: null,
+    length: null,
+  };
+}
+
 function runAi(action) {
   var q = getActiveQuill();
   if (!q) return;
-  var content = q.root.innerHTML;
+  var payload = buildAiPayload(q);
   setAiLoading(true);
   fetch('/admin/ai/writing', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: content, action: action }),
+    body: JSON.stringify({
+      content: payload.content,
+      action: action,
+      scope: payload.scope,
+    }),
   })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       setAiLoading(false);
       if (data.ok && data.result) {
-        q.root.innerHTML = data.result;
+        if (payload.scope === 'selection' && payload.index != null && payload.length > 0) {
+          q.deleteText(payload.index, payload.length);
+          q.clipboard.dangerouslyPasteHTML(payload.index, data.result);
+        } else {
+          q.root.innerHTML = data.result;
+        }
         syncBodies();
         updateReadingTime();
         updateOutline();
@@ -695,6 +880,20 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.writing-tool-btn[data-insert]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       insertBlock(btn.getAttribute('data-insert'));
+    });
+  });
+
+  document.querySelectorAll('.writing-font-chip').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var q = getActiveQuill();
+      if (!q) return;
+      q.focus();
+      var v = btn.getAttribute('data-font');
+      if (v === null || v === '') {
+        q.format('font', false);
+      } else {
+        q.format('font', v);
+      }
     });
   });
 

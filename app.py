@@ -3,8 +3,10 @@ import io
 import json
 import re
 import math
+import time
 import threading
 import requests
+from openai import OpenAI
 import markdown2
 import bleach
 from datetime import datetime
@@ -13,12 +15,15 @@ from slugify import slugify
 from dotenv import load_dotenv
 from flask import (Flask, render_template, redirect, url_for, request,
                    flash, jsonify, abort, session, send_from_directory,
-                   has_request_context)
+                   has_request_context, current_app)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (LoginManager, UserMixin, login_user, logout_user,
                          login_required, current_user)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from werkzeug.routing import BuildError
+
+from admin_help_assistant import resolve_help_query, HELP_SUGGESTIONS
 from PIL import Image, UnidentifiedImageError
 
 load_dotenv()
@@ -231,6 +236,302 @@ class Comment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     approved = db.Column(db.Boolean, default=True)
     post = db.relationship('Post', backref=db.backref('comments', lazy='dynamic'))
+
+
+class PortfolioItem(db.Model):
+    """Work / project cards on the public portfolio page."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    sort_order = db.Column(db.Integer, default=0, index=True)
+    icon = db.Column(db.String(32), default='📌')
+    category_en = db.Column(db.String(200), default='')
+    category_sw = db.Column(db.String(200), default='')
+    title_en = db.Column(db.String(300), default='')
+    title_sw = db.Column(db.String(300), default='')
+    desc_en = db.Column(db.Text, default='')
+    desc_sw = db.Column(db.Text, default='')
+    year = db.Column(db.String(20), default='')
+    image = db.Column(db.String(500))
+
+
+class PortfolioCredential(db.Model):
+    """Certificates, awards, achievements — optional PDF or image attachment."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    sort_order = db.Column(db.Integer, default=0, index=True)
+    icon = db.Column(db.String(32), default='🏅')
+    title_en = db.Column(db.String(300), default='')
+    title_sw = db.Column(db.String(300), default='')
+    detail_en = db.Column(db.Text, default='')
+    detail_sw = db.Column(db.Text, default='')
+    year = db.Column(db.String(20), default='')
+    attachment = db.Column(db.String(500))
+
+
+DEFAULT_PORTFOLIO_INTRO_EN = (
+    'A collection of academic papers, advocacy work, and published pieces that reflect a commitment '
+    'to justice, youth empowerment, and the law.'
+)
+DEFAULT_PORTFOLIO_INTRO_SW = (
+    'Mkusanyiko wa kazi za kitaaluma, ulinzi, na machapisho yanayoonyesha kujitolea kwa haki na vijana.'
+)
+
+DEFAULT_PORTFOLIO_ITEMS = [
+    {
+        'icon': '📜', 'category_en': 'Academic Research', 'category_sw': 'Utafiti wa Kitaaluma',
+        'title_en': 'Constitutional Law & Youth Rights', 'title_sw': 'Sheria ya Katiba & Haki za Vijana',
+        'desc_en': (
+            'Exploring the intersection of constitutional protections and the legal status of youth '
+            'in modern democratic systems.'
+        ),
+        'desc_sw': (
+            'Kuchunguza jinsi ulinzi wa katiba unavyokutana na hali ya kisheria ya vijana katika '
+            'mifumo ya kidemokrasia ya kisasa.'
+        ),
+        'year': '2024',
+    },
+    {
+        'icon': '✍', 'category_en': 'Published Essay', 'category_sw': 'Makala Iliyochapishwa',
+        'title_en': 'The Pen and the Gavel', 'title_sw': 'Kalamu na Nyundo',
+        'desc_en': (
+            'A meditation on how writing shapes legal thought and how legal thought shapes our world. '
+            'Published in the student law review.'
+        ),
+        'desc_sw': (
+            'Tafakari juu ya jinsi uandishi unavyounda mawazo ya kisheria na jinsi mawazo hayo '
+            'yanavyounda ulimwengu wetu.'
+        ),
+        'year': '2024',
+    },
+    {
+        'icon': '🏛', 'category_en': 'Moot Court', 'category_sw': 'Mahakama ya Mazoezi',
+        'title_en': 'Regional Moot Court Competition', 'title_sw': 'Mashindano ya Kanda ya Mahakama ya Mazoezi',
+        'desc_en': (
+            'Represented the law faculty in regional competition. Argued a landmark case on digital '
+            'privacy rights for minors.'
+        ),
+        'desc_sw': (
+            'Kuwakilisha chuo cha sheria katika mashindano ya kanda. Kujadili kesi muhimu kuhusu '
+            'faragha ya kidijitali kwa walio chini ya miaka.'
+        ),
+        'year': '2023',
+    },
+    {
+        'icon': '✊', 'category_en': 'Advocacy', 'category_sw': 'Ulinzi',
+        'title_en': 'Youth Legal Aid Initiative', 'title_sw': 'Mpango wa Msaada wa Kisheria kwa Vijana',
+        'desc_en': (
+            'Co-founded a campus initiative providing basic legal information to underprivileged youth '
+            'in the community.'
+        ),
+        'desc_sw': (
+            'Kuunda pamoja mpango wa chuo unaotoa taarifa za msingi za kisheria kwa vijana walio '
+            'katika hali ngumu.'
+        ),
+        'year': '2023',
+    },
+    {
+        'icon': '🎤', 'category_en': 'Speaking', 'category_sw': 'Hotuba',
+        'title_en': 'TEDx Campus Talk', 'title_sw': 'Hotuba ya TEDx Chuo',
+        'desc_en': (
+            'Delivered a talk on "Why Young People Should Care About the Law" to an audience of 300+ students.'
+        ),
+        'desc_sw': (
+            'Kutoa hotuba kuhusu "Kwa nini vijana wapaswa kujali sheria" kwa wasikilizaji zaidi ya 300.'
+        ),
+        'year': '2023',
+    },
+    {
+        'icon': '📰', 'category_en': 'Op-Ed', 'category_sw': 'Maoni',
+        'title_en': 'National Youth Justice Op-Ed', 'title_sw': 'Maoni ya Kitaifa kuhusu Haki kwa Vijana',
+        'desc_en': (
+            'Published opinion piece arguing for reform of juvenile justice systems in the national '
+            'student newspaper.'
+        ),
+        'desc_sw': (
+            'Makala ya maoni iliyochapishwa inayopendekeza mabadiliko katika mifumo ya haki kwa vijana '
+            'kwenye gazeti la wanafunzi.'
+        ),
+        'year': '2022',
+    },
+]
+
+DEFAULT_AWARDS_ITEMS = [
+    {
+        'icon': '🏆',
+        'title_en': 'Academic excellence award',
+        'title_sw': 'Tuzo ya ufanisi wa masomo',
+        'detail_en': 'Faculty recognition for outstanding performance in legal studies.',
+        'detail_sw': 'Utambuzi wa chuo kwa ufanisi bora katika masomo ya sheria.',
+        'year': '2024',
+    },
+    {
+        'icon': '📜',
+        'title_en': 'Certificate in Human Rights Law',
+        'title_sw': 'Cheti cha Sheria ya Haki za Binadamu',
+        'detail_en': 'Completed intensive programme on international human rights frameworks.',
+        'detail_sw': 'Kumaliza mafunzo ya kina kuhusu mifumo ya kimataifa ya haki za binadamu.',
+        'year': '2023',
+    },
+    {
+        'icon': '⭐',
+        'title_en': 'Community service honour',
+        'title_sw': 'Heshima ya huduma kwa jamii',
+        'detail_en': 'Awarded for volunteer legal literacy work with local youth groups.',
+        'detail_sw': 'Kutolewa kwa kazi ya kujitolea ya uelewa wa kisheria na vikundi vya vijana.',
+        'year': '2023',
+    },
+]
+
+
+def _legacy_portfolio_json_list(setting_key):
+    raw = SiteSettings.get(setting_key, '')
+    if not raw or not str(raw).strip():
+        return []
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return data
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return []
+
+
+def _row_to_portfolio_item(row, sort_order):
+    return PortfolioItem(
+        sort_order=sort_order,
+        icon=(row.get('icon') or '📌')[:32],
+        category_en=(row.get('category_en') or '')[:200],
+        category_sw=(row.get('category_sw') or '')[:200],
+        title_en=(row.get('title_en') or '')[:300],
+        title_sw=(row.get('title_sw') or '')[:300],
+        desc_en=row.get('desc_en') or '',
+        desc_sw=row.get('desc_sw') or '',
+        year=(row.get('year') or '')[:20],
+    )
+
+
+def _row_to_portfolio_credential(row, sort_order):
+    return PortfolioCredential(
+        sort_order=sort_order,
+        icon=(row.get('icon') or '🏅')[:32],
+        title_en=(row.get('title_en') or '')[:300],
+        title_sw=(row.get('title_sw') or '')[:300],
+        detail_en=row.get('detail_en') or '',
+        detail_sw=row.get('detail_sw') or '',
+        year=(row.get('year') or '')[:20],
+    )
+
+
+def _ensure_portfolio_seeded():
+    """One-time import from legacy JSON or built-in samples into SQL rows."""
+    if SiteSettings.get('portfolio_db_seeded_v2') == '1':
+        return
+    if PortfolioItem.query.first():
+        SiteSettings.set('portfolio_db_seeded_v2', '1')
+        return
+
+    legacy_items = _legacy_portfolio_json_list('portfolio_items_json')
+    items_src = legacy_items if legacy_items else DEFAULT_PORTFOLIO_ITEMS
+    for i, row in enumerate(items_src):
+        if isinstance(row, dict):
+            db.session.add(_row_to_portfolio_item(row, i))
+
+    legacy_creds = _legacy_portfolio_json_list('portfolio_awards_json')
+    creds_src = legacy_creds if legacy_creds else DEFAULT_AWARDS_ITEMS
+    for i, row in enumerate(creds_src):
+        if isinstance(row, dict):
+            db.session.add(_row_to_portfolio_credential(row, i))
+
+    db.session.commit()
+    SiteSettings.set('portfolio_db_seeded_v2', '1')
+
+
+def _portfolio_intro_value(key, fallback):
+    row = SiteSettings.query.filter_by(key=key).first()
+    if row is None:
+        return fallback
+    return row.value if row.value is not None else fallback
+
+
+def get_portfolio_page_data():
+    """Data for the public portfolio page (intro, ORM items, ORM credentials)."""
+    _ensure_portfolio_seeded()
+    items = PortfolioItem.query.order_by(
+        PortfolioItem.sort_order.asc(), PortfolioItem.id.asc(),
+    ).all()
+    awards = PortfolioCredential.query.order_by(
+        PortfolioCredential.sort_order.asc(), PortfolioCredential.id.asc(),
+    ).all()
+    # Use work_items (not "items") so Jinja portfolio.work_items works — dict.items is the .items() method.
+    return {
+        'intro_en': _portfolio_intro_value('portfolio_intro_en', DEFAULT_PORTFOLIO_INTRO_EN),
+        'intro_sw': _portfolio_intro_value('portfolio_intro_sw', DEFAULT_PORTFOLIO_INTRO_SW),
+        'work_items': items,
+        'awards': awards,
+    }
+
+
+def attachment_kind(path):
+    """'image' | 'pdf' | 'file' | 'none' for public portfolio templates."""
+    if not path or not str(path).strip():
+        return 'none'
+    p = str(path).lower().split('?')[0]
+    if p.endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif')):
+        return 'image'
+    if p.endswith('.pdf'):
+        return 'pdf'
+    return 'file'
+
+
+def _render_announcement_email(subject, inner_html):
+    settings = get_settings()
+    site_name = settings.get('name') or 'Our site'
+    base = get_public_base_url()
+    site_url = base or ''
+    contact = (settings.get('email') or '').strip()
+    unsub = f'mailto:{contact}?subject={quote("Unsubscribe from newsletter")}' if contact else ''
+    return render_template(
+        'email/announcement.html',
+        subject_line=subject,
+        header_title=site_name,
+        body_html=inner_html,
+        footer_note='You are receiving this because you subscribed to our newsletter.',
+        site_url=site_url,
+        visit_label='Visit the site',
+        unsubscribe_mailto=unsub,
+        unsubscribe_label='Unsubscribe',
+    )
+
+
+def schedule_subscriber_broadcast(subject, inner_html_sanitized):
+    """Email all active subscribers in a background thread (Brevo transactional)."""
+    app_obj = current_app._get_current_object()
+
+    def worker():
+        with app_obj.app_context():
+            if not brevo_transactional_ready():
+                app.logger.error('Broadcast skipped: Brevo transactional not configured.')
+                return
+            subs = Subscriber.query.filter_by(active=True).all()
+            if not subs:
+                app.logger.info('Broadcast skipped: no active subscribers.')
+                return
+            html = _render_announcement_email(subject, inner_html_sanitized)
+            plain = _html_to_text_fallback(inner_html_sanitized)
+            subj = subject[:998]
+            ok, fail = 0, 0
+            for sub in subs:
+                if brevo_send_transactional(sub.email, sub.name or '', subj, html, text_content=plain):
+                    ok += 1
+                else:
+                    fail += 1
+                time.sleep(0.12)
+            app.logger.info(
+                'Subscriber broadcast finished: sent=%s failed=%s subject=%r',
+                ok, fail, subj[:80],
+            )
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -748,6 +1049,40 @@ def asset_filter(path):
         return '/static/' + path
 
 
+@app.template_filter('attachment_kind')
+def attachment_kind_filter(path):
+    return attachment_kind(path)
+
+
+def _next_portfolio_item_sort():
+    m = db.session.query(db.func.max(PortfolioItem.sort_order)).scalar()
+    return (m if m is not None else -1) + 1
+
+
+def _next_credential_sort():
+    m = db.session.query(db.func.max(PortfolioCredential.sort_order)).scalar()
+    return (m if m is not None else -1) + 1
+
+
+def _save_portfolio_item_image(file_storage):
+    if not file_storage or not file_storage.filename:
+        return None
+    if not allowed_file(file_storage.filename):
+        raise ValueError('Image type not allowed. Use PNG, JPG, WebP, or GIF.')
+    return save_upload(file_storage, 'portfolio', (1400, 900))
+
+
+def _save_credential_attachment(file_storage):
+    if not file_storage or not file_storage.filename:
+        return None
+    fn = (file_storage.filename or '').lower()
+    if fn.endswith('.pdf'):
+        return save_upload(file_storage, 'credentials')
+    if allowed_file(file_storage.filename):
+        return save_upload(file_storage, 'credentials', (1200, 1200))
+    raise ValueError('Upload a PDF or image (PNG, JPG, WebP, GIF).')
+
+
 # ─── Language toggle ──────────────────────────────────────────────────────────
 
 @app.route('/set-lang/<lang>')
@@ -798,7 +1133,9 @@ def post(slug):
 
 @app.route('/portfolio')
 def portfolio():
-    return render_template('public/portfolio.html')
+    lang = get_lang()
+    portfolio_data = get_portfolio_page_data()
+    return render_template('public/portfolio.html', portfolio=portfolio_data, lang=lang)
 
 
 @app.route('/subscribe', methods=['POST'])
@@ -870,6 +1207,91 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
+# Help assistant: human-readable labels for suggested links (en / sw).
+HELP_ASSISTANT_NAV_LABELS = {
+    'admin_dashboard': {'en': 'Open Dashboard', 'sw': 'Fungua Dashboard'},
+    'admin_posts': {'en': 'Blog Posts', 'sw': 'Makala'},
+    'admin_new_post': {'en': 'New Post', 'sw': 'Makala mpya'},
+    'admin_settings': {'en': 'Site Settings', 'sw': 'Mipangilio ya tovuti'},
+    'admin_portfolio': {'en': 'Portfolio', 'sw': 'Portfolio'},
+    'admin_subscribers': {'en': 'Subscribers', 'sw': 'Waliojiunga'},
+    'admin_broadcast': {'en': 'Email subscribers', 'sw': 'Tuma barua'},
+    'admin_comments': {'en': 'Comments', 'sw': 'Maoni'},
+    'admin_logout': {'en': 'Logout', 'sw': 'Toka'},
+}
+
+
+@app.route('/admin/help-assistant/config', methods=['GET'])
+@login_required
+def admin_help_assistant_config():
+    chips = []
+    for s in HELP_SUGGESTIONS:
+        chips.append({
+            'id': s['id'],
+            'label_en': s['prompt_en'][:72] + ('…' if len(s['prompt_en']) > 72 else ''),
+            'label_sw': s['prompt_sw'][:72] + ('…' if len(s['prompt_sw']) > 72 else ''),
+            'prompt_en': s['prompt_en'],
+            'prompt_sw': s['prompt_sw'],
+        })
+    ai_on = _help_assistant_ai_keys_configured()
+    w_en = (
+        'Hi — I explain how this admin panel works. Ask in simple English or Kiswahili. '
+        'I do not change settings for you; I only give steps and tips. '
+        'Try the shortcuts below or type your own question.'
+    )
+    w_sw = (
+        'Hujambo — naeleza jinsi paneli hii inavyofanya kazi. Uliza kwa Kiingereza au Kiswahili kwa lugha rahisi. '
+        'Sibadilishi mipangilio badala yako; natoa hatua tu. '
+        'Jaribu vitufe hapa chini au andika swali lako.'
+    )
+    if ai_on:
+        w_en += ' When your site has smart help enabled, my answers are gently polished for clarity — the facts stay the same.'
+        w_sw += ' Tovuti yako ikiwa na msaada mahiri, majibu yanaweza lainishwa kidogo — ukweli hubaki ule ule.'
+    return jsonify({
+        'ok': True,
+        'welcome_en': w_en,
+        'welcome_sw': w_sw,
+        'ai_available': ai_on,
+        'chips': chips,
+    })
+
+
+@app.route('/admin/help-assistant/chat', methods=['POST'])
+@login_required
+def admin_help_assistant_chat():
+    data = request.get_json(silent=True) or {}
+    msg = (data.get('message') or '').strip()
+    lang = (data.get('lang') or 'en').lower()
+    if lang not in ('en', 'sw'):
+        lang = 'en'
+    intent_id, reply, endpoints = resolve_help_query(msg, lang)
+    links = []
+    for ep in endpoints:
+        try:
+            url = url_for(ep)
+        except BuildError:
+            continue
+        lab = HELP_ASSISTANT_NAV_LABELS.get(ep, {})
+        label = lab.get(lang) or lab.get('en') or ep.replace('admin_', '').replace('_', ' ').title()
+        links.append({'url': url, 'label': label})
+
+    source = 'faq'
+    final_reply = reply
+    if intent_id != 'empty':
+        expanded, _ai_err = help_assistant_ai_expand(msg, lang, reply, intent_id)
+        if expanded:
+            final_reply = expanded
+            source = 'ai'
+
+    return jsonify({
+        'ok': True,
+        'intent': intent_id,
+        'reply': final_reply,
+        'links': links,
+        'source': source,
+    })
+
+
 # ─── Admin routes ─────────────────────────────────────────────────────────────
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -933,12 +1355,15 @@ def admin_settings():
                     except ValueError as e:
                         flash(str(e), 'error')
 
-        # CV upload
-        if 'cv' in request.files and request.files['cv'].filename:
-            f = request.files['cv']
-            if f.filename.endswith('.pdf'):
+        # CV upload (case-insensitive .pdf; must pass allowed_file)
+        cv_upload = request.files.get('cv')
+        if cv_upload and cv_upload.filename:
+            fn = (cv_upload.filename or '').strip()
+            if not allowed_file(fn) or not fn.lower().endswith('.pdf'):
+                flash('CV must be a PDF file.', 'error')
+            else:
                 try:
-                    rel = save_upload(f, 'documents')
+                    rel = save_upload(cv_upload, 'documents')
                     SiteSettings.set('cv', rel)
                 except ValueError as e:
                     flash(str(e), 'error')
@@ -1100,6 +1525,215 @@ def admin_subscribers():
     return render_template('admin/subscribers.html', subs=subs)
 
 
+@app.route('/admin/broadcast', methods=['GET', 'POST'])
+@login_required
+def admin_broadcast():
+    count = Subscriber.query.filter_by(active=True).count()
+    if request.method == 'POST':
+        subject = (request.form.get('subject') or '').strip()
+        body = request.form.get('body_html') or ''
+        if not subject:
+            flash('Subject is required.', 'error')
+            return redirect(url_for('admin_broadcast'))
+        if not body.strip():
+            flash('Message body is required.', 'error')
+            return redirect(url_for('admin_broadcast'))
+        if not brevo_transactional_ready():
+            flash('Set BREVO_API_KEY and BREVO_SENDER_EMAIL before sending subscriber email.', 'error')
+            return redirect(url_for('admin_broadcast'))
+        try:
+            inner = bleach.clean(
+                body,
+                tags=BLEACH_TAGS,
+                attributes=BLEACH_ATTRS,
+                protocols=BLEACH_PROTOCOLS,
+                strip=True,
+            )
+        except Exception:
+            flash('Could not sanitize HTML body.', 'error')
+            return redirect(url_for('admin_broadcast'))
+        schedule_subscriber_broadcast(subject, inner)
+        flash(
+            f'Broadcast queued for {count} active subscriber(s). Sending runs in the background; '
+            'check server logs for per-recipient errors.',
+            'success',
+        )
+        return redirect(url_for('admin_broadcast'))
+    return render_template('admin/broadcast.html', count=count)
+
+
+@app.route('/admin/portfolio', methods=['GET', 'POST'])
+@login_required
+def admin_portfolio():
+    _ensure_portfolio_seeded()
+    if request.method == 'POST':
+        action = (request.form.get('action') or '').strip()
+
+        if action == 'save_intro':
+            SiteSettings.set('portfolio_intro_en', request.form.get('portfolio_intro_en', ''))
+            SiteSettings.set('portfolio_intro_sw', request.form.get('portfolio_intro_sw', ''))
+            cvf = request.files.get('cv')
+            if cvf and cvf.filename:
+                fn = (cvf.filename or '').strip()
+                if not allowed_file(fn) or not fn.lower().endswith('.pdf'):
+                    flash('CV must be a PDF file.', 'error')
+                    return redirect(url_for('admin_portfolio'))
+                try:
+                    rel = save_upload(cvf, 'documents')
+                    SiteSettings.set('cv', rel)
+                    flash('Intro saved and CV file uploaded.', 'success')
+                except ValueError as e:
+                    flash(str(e), 'error')
+                    return redirect(url_for('admin_portfolio'))
+            else:
+                flash('Intro text saved.', 'success')
+            return redirect(url_for('admin_portfolio'))
+
+        if action == 'remove_cv':
+            SiteSettings.set('cv', '')
+            flash('CV removed from the site (you can upload a new PDF anytime).', 'success')
+            return redirect(url_for('admin_portfolio'))
+
+        if action == 'add_item':
+            it = PortfolioItem(
+                sort_order=_next_portfolio_item_sort(),
+                icon=(request.form.get('icon') or '📌')[:32],
+                category_en=(request.form.get('category_en') or '')[:200],
+                category_sw=(request.form.get('category_sw') or '')[:200],
+                title_en=(request.form.get('title_en') or '')[:300],
+                title_sw=(request.form.get('title_sw') or '')[:300],
+                desc_en=request.form.get('desc_en') or '',
+                desc_sw=request.form.get('desc_sw') or '',
+                year=(request.form.get('year') or '')[:20],
+            )
+            db.session.add(it)
+            db.session.flush()
+            if request.files.get('image') and request.files['image'].filename:
+                try:
+                    it.image = _save_portfolio_item_image(request.files['image'])
+                except ValueError as e:
+                    flash(str(e), 'error')
+                    db.session.rollback()
+                    return redirect(url_for('admin_portfolio'))
+            db.session.commit()
+            flash('Work item added.', 'success')
+            return redirect(url_for('admin_portfolio'))
+
+        if action == 'update_item':
+            pid = request.form.get('item_id', type=int)
+            if not pid:
+                flash('Invalid work item.', 'error')
+                return redirect(url_for('admin_portfolio'))
+            it = PortfolioItem.query.get_or_404(pid)
+            it.icon = (request.form.get('icon') or '📌')[:32]
+            it.category_en = (request.form.get('category_en') or '')[:200]
+            it.category_sw = (request.form.get('category_sw') or '')[:200]
+            it.title_en = (request.form.get('title_en') or '')[:300]
+            it.title_sw = (request.form.get('title_sw') or '')[:300]
+            it.desc_en = request.form.get('desc_en') or ''
+            it.desc_sw = request.form.get('desc_sw') or ''
+            it.year = (request.form.get('year') or '')[:20]
+            so = request.form.get('sort_order', type=int)
+            if so is not None:
+                it.sort_order = so
+            if request.files.get('image') and request.files['image'].filename:
+                try:
+                    it.image = _save_portfolio_item_image(request.files['image'])
+                except ValueError as e:
+                    flash(str(e), 'error')
+                    return redirect(url_for('admin_portfolio'))
+            db.session.commit()
+            flash('Work item updated.', 'success')
+            return redirect(url_for('admin_portfolio'))
+
+        if action == 'add_credential':
+            cr = PortfolioCredential(
+                sort_order=_next_credential_sort(),
+                icon=(request.form.get('icon') or '🏅')[:32],
+                title_en=(request.form.get('title_en') or '')[:300],
+                title_sw=(request.form.get('title_sw') or '')[:300],
+                detail_en=request.form.get('detail_en') or '',
+                detail_sw=request.form.get('detail_sw') or '',
+                year=(request.form.get('year') or '')[:20],
+            )
+            db.session.add(cr)
+            db.session.flush()
+            if request.files.get('attachment') and request.files['attachment'].filename:
+                try:
+                    cr.attachment = _save_credential_attachment(request.files['attachment'])
+                except ValueError as e:
+                    flash(str(e), 'error')
+                    db.session.rollback()
+                    return redirect(url_for('admin_portfolio'))
+            db.session.commit()
+            flash('Certificate / award added.', 'success')
+            return redirect(url_for('admin_portfolio'))
+
+        if action == 'update_credential':
+            cid = request.form.get('credential_id', type=int)
+            if not cid:
+                flash('Invalid entry.', 'error')
+                return redirect(url_for('admin_portfolio'))
+            cr = PortfolioCredential.query.get_or_404(cid)
+            cr.icon = (request.form.get('icon') or '🏅')[:32]
+            cr.title_en = (request.form.get('title_en') or '')[:300]
+            cr.title_sw = (request.form.get('title_sw') or '')[:300]
+            cr.detail_en = request.form.get('detail_en') or ''
+            cr.detail_sw = request.form.get('detail_sw') or ''
+            cr.year = (request.form.get('year') or '')[:20]
+            so = request.form.get('sort_order', type=int)
+            if so is not None:
+                cr.sort_order = so
+            if request.files.get('attachment') and request.files['attachment'].filename:
+                try:
+                    cr.attachment = _save_credential_attachment(request.files['attachment'])
+                except ValueError as e:
+                    flash(str(e), 'error')
+                    return redirect(url_for('admin_portfolio'))
+            db.session.commit()
+            flash('Certificate / award updated.', 'success')
+            return redirect(url_for('admin_portfolio'))
+
+        flash('Unknown action.', 'error')
+        return redirect(url_for('admin_portfolio'))
+
+    pdata = get_portfolio_page_data()
+    items = PortfolioItem.query.order_by(
+        PortfolioItem.sort_order.asc(), PortfolioItem.id.asc(),
+    ).all()
+    credentials = PortfolioCredential.query.order_by(
+        PortfolioCredential.sort_order.asc(), PortfolioCredential.id.asc(),
+    ).all()
+    return render_template(
+        'admin/portfolio.html',
+        intro_en=pdata['intro_en'],
+        intro_sw=pdata['intro_sw'],
+        items=items,
+        credentials=credentials,
+        cv_path=SiteSettings.get('cv', ''),
+    )
+
+
+@app.route('/admin/portfolio/item/<int:item_id>/delete', methods=['POST'])
+@login_required
+def admin_portfolio_item_delete(item_id):
+    it = PortfolioItem.query.get_or_404(item_id)
+    db.session.delete(it)
+    db.session.commit()
+    flash('Work item removed.', 'success')
+    return redirect(url_for('admin_portfolio'))
+
+
+@app.route('/admin/portfolio/credential/<int:cred_id>/delete', methods=['POST'])
+@login_required
+def admin_portfolio_credential_delete(cred_id):
+    cr = PortfolioCredential.query.get_or_404(cred_id)
+    db.session.delete(cr)
+    db.session.commit()
+    flash('Certificate / award removed.', 'success')
+    return redirect(url_for('admin_portfolio'))
+
+
 @app.route('/admin/upload-image', methods=['POST'])
 @login_required
 def admin_upload_image():
@@ -1121,22 +1755,50 @@ def admin_upload_image():
 
 AI_WRITING_ACTIONS = {
     'improve': (
-        'Improve clarity, flow, and readability. Keep the meaning. Preserve headings, lists, links, and images.'
+        'Light-touch clarity pass: fix unclear phrases and small redundancies only. '
+        'Keep the author’s voice, meaning, and legal precision. Do not add facts, arguments, or new sections.'
     ),
     'grammar': (
-        'Fix grammar, spelling, and punctuation only. Do not change tone except where incorrect grammar forces it.'
+        'Fix spelling, grammar, and punctuation only. Do not rephrase for style, “sound better”, or shorten. '
+        'Keep the same wording unless a correction strictly requires a tiny change (e.g. subject–verb agreement).'
     ),
     'tone': (
-        'Make the tone warmer, clearer, and more confident for a general audience. Keep facts and structure.'
+        'Adjust tone to be warmer, clearer, and more confident for a general audience. '
+        'Keep facts, citations, and structure; do not remove or reorder major blocks.'
     ),
 }
 
+# Lower temperature = less wholesale rewriting (especially grammar).
+AI_ACTION_TEMPERATURE = {
+    'grammar': 0.08,
+    'improve': 0.18,
+    'tone': 0.32,
+}
+
 AI_EDITOR_SYSTEM = (
-    'You are a professional editor. Reply with ONLY an HTML fragment (no markdown, no code fences, '
+    'You are a careful copy editor. Reply with ONLY an HTML fragment (no markdown, no code fences, '
     'no <!DOCTYPE> or <html> wrapper). Use tags such as: p, br, strong, em, u, s, h1, h2, h3, ul, ol, li, '
     'a, img, blockquote, pre, code. For external links use target="_blank" rel="noopener noreferrer". '
-    'Preserve img src and a href when possible.'
+    'Preserve img src and a href exactly when they are unchanged. '
+    'Keep the same block order and structure as the input: do not replace the piece with a new outline, '
+    'summary, or heavily condensed version unless the input is already that short.'
 )
+
+
+def _ai_instruction_for(action, scope):
+    """Scope: 'full' = entire body, 'selection' = highlighted excerpt only."""
+    base = AI_WRITING_ACTIONS[action]
+    if scope == 'selection':
+        return (
+            'The HTML below is ONLY a highlighted excerpt from a larger article (not the full post). '
+            'Return ONLY the revised excerpt as an HTML fragment of similar length and structure—'
+            'do not invent surrounding sections or rewrite as if it were the whole article. '
+        ) + base
+    return (
+        'The HTML below is the full article body. Edit conservatively: same order of blocks, same headings '
+        'where possible, same lists and media. Do not merge or split paragraphs except to fix clear grammar. '
+        'Do not summarize, shorten, or replace the article with a new draft. '
+    ) + base
 
 
 def _normalize_ai_html_output(content):
@@ -1156,214 +1818,249 @@ def _ai_max_input_chars():
         return 120000
 
 
-def gemini_rewrite_editor_html(html_fragment, instruction):
-    """Rewrite HTML via Google Gemini (free tier: https://aistudio.google.com/apikey)."""
-    api_key = (os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY') or '').strip()
-    if not api_key:
-        return None, None
-    model = (os.environ.get('GEMINI_MODEL') or 'gemini-2.0-flash').strip()
-    url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
-    user_text = f'{instruction}\n\nHTML:\n{html_fragment}'
-    payload = {
-        'systemInstruction': {'parts': [{'text': AI_EDITOR_SYSTEM}]},
-        'contents': [{'role': 'user', 'parts': [{'text': user_text}]}],
-        'generationConfig': {
-            'temperature': 0.35,
-            'maxOutputTokens': 8192,
-        },
-    }
+# OpenAI-SDK-compatible providers: Groq + OpenRouter (preset IDs below).
+AI_CHAT_MODELS = {
+    'groq': {
+        'balanced': 'llama-3.3-70b-versatile',
+        'fast': 'llama-3.1-8b-instant',
+        'long_context': 'mixtral-8x7b-32768',
+        'google': 'gemma2-9b-it',
+    },
+    'openrouter': {
+        'auto_free': 'openrouter/free',
+        'smart_free': 'qwen/qwen3.6-plus:free',
+        'fast_free': 'stepfun/step-3.5-flash:free',
+        'nvidia_free': 'nvidia/nemotron-3-super-120b-a12b:free',
+        'vision_free': 'google/lyria-3-pro-preview',
+    },
+}
+
+
+def _groq_chat_model_id():
+    direct = (os.environ.get('GROQ_MODEL') or '').strip()
+    if direct:
+        return direct
+    preset = (os.environ.get('GROQ_MODEL_PRESET') or 'balanced').strip().lower()
+    return AI_CHAT_MODELS['groq'].get(preset) or AI_CHAT_MODELS['groq']['balanced']
+
+
+def _openrouter_chat_model_id():
+    direct = (os.environ.get('OPENROUTER_MODEL') or '').strip()
+    if direct:
+        return direct
+    preset = (os.environ.get('OPENROUTER_MODEL_PRESET') or 'auto_free').strip().lower()
+    return AI_CHAT_MODELS['openrouter'].get(preset) or AI_CHAT_MODELS['openrouter']['auto_free']
+
+
+def _help_assistant_ai_keys_configured():
+    return bool(
+        (os.environ.get('GROQ_API_KEY') or '').strip()
+        or (os.environ.get('OPENROUTER_API_KEY') or '').strip()
+    )
+
+
+HELP_ASSISTANT_AI_SYSTEM = (
+    'You are a friendly guide for a non-technical person using a blog admin panel.\n\n'
+    'You receive the user\'s question and a REFERENCE answer that is correct for this admin panel.\n\n'
+    'Rules:\n'
+    '- Write your entire reply in the language specified (English OR Kiswahili only).\n'
+    '- Stay faithful to the REFERENCE. You may shorten, clarify, or use friendly bullets, but do not '
+    'invent menus, buttons, or steps that are not implied by the REFERENCE.\n'
+    '- Do not mention: developers, programming, configuration files, secrets, databases, source code, '
+    'hosting brands, third-party APIs, product names for AI providers, or technical diagnostics.\n'
+    '- If the REFERENCE says to ask whoever runs the website, say that in very simple words.\n'
+    '- You may use **bold** only for short labels that match the interface (e.g. **Save**, **Site Settings**).\n'
+    '- No code fences. No HTML tags. Plain text with line breaks.'
+)
+
+
+def _openai_sdk_text_chat(client, model, system: str, user: str, temperature=0.2, max_tokens=900):
+    """Plain-text chat completion; return (text, error)."""
     try:
-        resp = requests.post(
-            url,
-            params={'key': api_key},
-            headers={'Content-Type': 'application/json'},
-            json=payload,
-            timeout=120,
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {'role': 'system', 'content': system},
+                {'role': 'user', 'content': user},
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
-    except requests.RequestException:
-        return None, 'Could not reach Google Gemini. Check the network and try again.'
-    if resp.status_code != 200:
-        try:
-            data = resp.json()
-            err = data.get('error', {})
-            if isinstance(err, dict):
-                msg = err.get('message', str(err))[:600]
-            else:
-                msg = str(err)[:600]
-        except Exception:
-            msg = (resp.text or '')[:600] or 'Gemini request failed'
-        return None, msg
+    except Exception as e:
+        msg = str(e)
+        if hasattr(e, 'message') and e.message:
+            msg = str(e.message)
+        return None, msg[:650]
     try:
-        data = resp.json()
-        cands = data.get('candidates') or []
-        if not cands:
-            fb = data.get('promptFeedback') or {}
-            block = fb.get('blockReason')
-            return None, (block or 'Gemini returned no output (blocked or empty).')
-        parts = (cands[0].get('content') or {}).get('parts') or []
-        text = ''.join(
-            p.get('text', '') for p in parts if isinstance(p, dict)
-        )
-    except (IndexError, KeyError, TypeError):
-        return None, 'Unexpected Gemini response shape.'
-    out = _normalize_ai_html_output(text)
+        raw = (resp.choices[0].message.content or '') if resp.choices else ''
+    except (IndexError, AttributeError, TypeError):
+        return None, 'Unexpected chat completion response.'
+    out = _normalize_ai_html_output(raw)
     if not out:
-        return None, 'AI returned empty content.'
-    return out, None
+        return None, 'Empty response.'
+    return out.strip(), None
 
 
-def grok_rewrite_editor_html(html_fragment, instruction):
-    """Rewrite HTML via xAI Grok (OpenAI-compatible API)."""
-    api_key = (os.environ.get('XAI_API_KEY') or '').strip()
-    if not api_key:
+def help_assistant_ai_expand(user_question: str, lang: str, reference: str, intent_id: str):
+    """
+    Use Groq then OpenRouter to rewrite the reference in simpler language.
+    Returns (expanded_text, None) on success, or (None, error) on failure.
+    Skips when no keys or intent is empty.
+    """
+    if intent_id == 'empty':
         return None, None
-    model = (os.environ.get('XAI_MODEL') or 'grok-2-latest').strip()
-    url = (os.environ.get('XAI_API_BASE') or 'https://api.x.ai/v1').rstrip('/') + '/chat/completions'
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
-    }
-    try:
-        resp = requests.post(
-            url,
-            headers=headers,
-            json={
-                'model': model,
-                'messages': [
-                    {'role': 'system', 'content': AI_EDITOR_SYSTEM},
-                    {'role': 'user', 'content': f'{instruction}\n\nHTML:\n{html_fragment}'},
-                ],
-                'temperature': 0.35,
-                'max_tokens': 8192,
-            },
-            timeout=120,
+    if not _help_assistant_ai_keys_configured():
+        return None, None
+    ref = reference.strip()
+    if len(ref) > 8000:
+        ref = ref[:8000] + '\n…'
+    lang_name = 'Kiswahili' if lang == 'sw' else 'English'
+    user_block = (
+        f'Reply language (entire answer must be in this language): {lang_name}\n\n'
+        f'User question:\n{user_question}\n\n'
+        f'REFERENCE (stay accurate):\n{ref}'
+    )
+    groq_key = (os.environ.get('GROQ_API_KEY') or '').strip()
+    or_key = (os.environ.get('OPENROUTER_API_KEY') or '').strip()
+    failures = []
+
+    if groq_key:
+        client = OpenAI(
+            base_url='https://api.groq.com/openai/v1',
+            api_key=groq_key,
+            timeout=90.0,
         )
-    except requests.RequestException:
-        return None, 'Could not reach xAI. Try again later.'
-    if resp.status_code != 200:
-        try:
-            data = resp.json()
-            err_obj = data.get('error')
-            if isinstance(err_obj, dict):
-                err = err_obj.get('message', str(err_obj))[:500]
-            elif isinstance(err_obj, str):
-                err = err_obj[:500]
-            else:
-                err = resp.text[:500] or 'Grok request failed'
-        except Exception:
-            err = resp.text[:500] or 'Grok request failed'
-        return None, err
+        out, err = _openai_sdk_text_chat(
+            client, _groq_chat_model_id(), HELP_ASSISTANT_AI_SYSTEM, user_block, 0.2, 900,
+        )
+        if out:
+            app.logger.info('Help assistant: AI expansion used Groq (%s)', _groq_chat_model_id())
+            return out, None
+        if err:
+            failures.append(err)
+            app.logger.warning('Help assistant: Groq expansion failed — %s', err[:180])
+
+    if or_key:
+        model = _openrouter_chat_model_id()
+        base = (os.environ.get('OPENROUTER_API_BASE') or 'https://openrouter.ai/api/v1').rstrip('/')
+        headers = {}
+        referer = (
+            os.environ.get('OPENROUTER_HTTP_REFERER')
+            or os.environ.get('PUBLIC_BASE_URL')
+            or os.environ.get('SITE_URL')
+            or ''
+        ).strip()
+        if referer:
+            headers['HTTP-Referer'] = referer
+        app_title = (os.environ.get('OPENROUTER_APP_TITLE') or '').strip()
+        if app_title:
+            headers['X-Title'] = app_title
+        kw = {'base_url': base, 'api_key': or_key, 'timeout': 90.0}
+        if headers:
+            kw['default_headers'] = headers
+        client = OpenAI(**kw)
+        out, err = _openai_sdk_text_chat(client, model, HELP_ASSISTANT_AI_SYSTEM, user_block, 0.2, 900)
+        if out:
+            app.logger.info('Help assistant: AI expansion used OpenRouter (%s)', model)
+            return out, None
+        if err:
+            failures.append(err)
+
+    return None, (failures[0] if failures else 'AI unavailable')
+
+
+def _openai_sdk_rewrite_html(client, model, html_fragment, instruction, temperature=0.25):
+    """Run chat completion; return (html_fragment_out, error_message)."""
+    user_content = f'{instruction}\n\nHTML:\n{html_fragment}'
     try:
-        payload = resp.json()
-        choices = payload.get('choices') or []
-        raw = (choices[0].get('message') or {}).get('content') or ''
-    except (IndexError, KeyError, TypeError):
-        return None, 'Unexpected Grok response.'
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {'role': 'system', 'content': AI_EDITOR_SYSTEM},
+                {'role': 'user', 'content': user_content},
+            ],
+            temperature=temperature,
+            max_tokens=8192,
+        )
+    except Exception as e:
+        msg = str(e)
+        if hasattr(e, 'message') and e.message:
+            msg = str(e.message)
+        return None, msg[:650]
+    try:
+        raw = (resp.choices[0].message.content or '') if resp.choices else ''
+    except (IndexError, AttributeError, TypeError):
+        return None, 'Unexpected chat completion response.'
     out = _normalize_ai_html_output(raw)
     if not out:
         return None, 'AI returned empty content.'
     return out, None
 
 
-def openrouter_rewrite_editor_html(html_fragment, instruction):
-    """Rewrite HTML via OpenRouter (OpenAI-compatible chat completions API)."""
+def _groq_rewrite_editor_html(html_fragment, instruction, temperature=0.25):
+    api_key = (os.environ.get('GROQ_API_KEY') or '').strip()
+    if not api_key:
+        return None, None
+    model = _groq_chat_model_id()
+    client = OpenAI(
+        base_url='https://api.groq.com/openai/v1',
+        api_key=api_key,
+        timeout=120.0,
+    )
+    return _openai_sdk_rewrite_html(client, model, html_fragment, instruction, temperature)
+
+
+def _openrouter_rewrite_editor_html(html_fragment, instruction, temperature=0.25):
     api_key = (os.environ.get('OPENROUTER_API_KEY') or '').strip()
     if not api_key:
         return None, None
-    # Default to Google's Gemini on OpenRouter when this tier is used as fallback.
-    model = (os.environ.get('OPENROUTER_MODEL') or 'google/gemini-2.0-flash-001').strip()
-    base = os.environ.get('OPENROUTER_API_BASE', 'https://openrouter.ai/api/v1').rstrip('/')
-    url = f'{base}/chat/completions'
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
-    }
-    referer = os.environ.get('OPENROUTER_HTTP_REFERER', '').strip()
+    model = _openrouter_chat_model_id()
+    base = (os.environ.get('OPENROUTER_API_BASE') or 'https://openrouter.ai/api/v1').rstrip('/')
+    headers = {}
+    referer = (
+        os.environ.get('OPENROUTER_HTTP_REFERER')
+        or os.environ.get('PUBLIC_BASE_URL')
+        or os.environ.get('SITE_URL')
+        or ''
+    ).strip()
     if referer:
         headers['HTTP-Referer'] = referer
-    app_title = os.environ.get('OPENROUTER_APP_TITLE', '').strip()
+    app_title = (os.environ.get('OPENROUTER_APP_TITLE') or '').strip()
     if app_title:
         headers['X-Title'] = app_title
-    try:
-        resp = requests.post(
-            url,
-            headers=headers,
-            json={
-                'model': model,
-                'messages': [
-                    {'role': 'system', 'content': AI_EDITOR_SYSTEM},
-                    {'role': 'user', 'content': f'{instruction}\n\nHTML:\n{html_fragment}'},
-                ],
-                'temperature': 0.35,
-                'max_tokens': 8192,
-            },
-            timeout=120,
-        )
-    except requests.RequestException:
-        return None, 'Could not reach OpenRouter. Try again later.'
-    if resp.status_code != 200:
-        try:
-            data = resp.json()
-            err_obj = data.get('error')
-            if isinstance(err_obj, dict):
-                err = err_obj.get('message', str(err_obj))[:500]
-            elif isinstance(err_obj, str):
-                err = err_obj[:500]
-            else:
-                err = resp.text[:500] or 'OpenRouter request failed'
-        except Exception:
-            err = resp.text[:500] or 'OpenRouter request failed'
-        return None, err
-    try:
-        payload = resp.json()
-        choices = payload.get('choices') or []
-        raw = (choices[0].get('message') or {}).get('content') or ''
-    except (IndexError, KeyError, TypeError):
-        return None, 'Unexpected AI response.'
-    out = _normalize_ai_html_output(raw)
-    if not out:
-        return None, 'AI returned empty content.'
-    return out, None
+    kw = {'base_url': base, 'api_key': api_key, 'timeout': 120.0}
+    if headers:
+        kw['default_headers'] = headers
+    client = OpenAI(**kw)
+    return _openai_sdk_rewrite_html(client, model, html_fragment, instruction, temperature)
 
 
-def rewrite_editor_html(html_fragment, instruction):
-    """Try AI providers in order: Gemini → xAI Grok → OpenRouter. Uses the first configured key; on API failure, falls back to the next."""
-    gem_key = (os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY') or '').strip()
-    xai_key = (os.environ.get('XAI_API_KEY') or '').strip()
+def rewrite_editor_html(html_fragment, instruction, temperature=0.25):
+    """Groq first, then OpenRouter. Skips providers with no key; on failure, tries the next."""
+    groq_key = (os.environ.get('GROQ_API_KEY') or '').strip()
     or_key = (os.environ.get('OPENROUTER_API_KEY') or '').strip()
-
     failures = []
 
-    if gem_key:
-        out, err = gemini_rewrite_editor_html(html_fragment, instruction)
+    if groq_key:
+        out, err = _groq_rewrite_editor_html(html_fragment, instruction, temperature)
         if out:
-            app.logger.info('AI writing: used Gemini')
+            app.logger.info('AI writing: used Groq (%s)', _groq_chat_model_id())
             return out, None
         if err:
-            failures.append(f'Gemini: {err}')
-            app.logger.warning('AI writing: Gemini failed, trying next provider — %s', err[:200])
-
-    if xai_key:
-        out, err = grok_rewrite_editor_html(html_fragment, instruction)
-        if out:
-            app.logger.info('AI writing: used xAI Grok')
-            return out, None
-        if err:
-            failures.append(f'Grok: {err}')
-            app.logger.warning('AI writing: Grok failed, trying next provider — %s', err[:200])
+            failures.append(f'Groq: {err}')
+            app.logger.warning('AI writing: Groq failed, trying OpenRouter — %s', err[:200])
 
     if or_key:
-        out, err = openrouter_rewrite_editor_html(html_fragment, instruction)
+        out, err = _openrouter_rewrite_editor_html(html_fragment, instruction, temperature)
         if out:
-            app.logger.info('AI writing: used OpenRouter')
+            app.logger.info('AI writing: used OpenRouter (%s)', _openrouter_chat_model_id())
             return out, None
         if err:
             failures.append(f'OpenRouter: {err}')
 
-    if not (gem_key or xai_key or or_key):
+    if not (groq_key or or_key):
         return None, (
-            'No AI API keys configured. Set one or more of: GEMINI_API_KEY (or GOOGLE_API_KEY), '
-            'XAI_API_KEY, OPENROUTER_API_KEY.'
+            'No AI API keys configured. Set GROQ_API_KEY and/or OPENROUTER_API_KEY.'
         )
     detail = ' '.join(failures) if failures else 'Every provider returned empty output.'
     return None, f'All configured AI providers failed. {detail}'
@@ -1375,6 +2072,9 @@ def admin_ai_writing():
     data = request.get_json(silent=True) or {}
     content = data.get('content') or ''
     action = (data.get('action') or '').strip().lower()
+    scope = (data.get('scope') or 'full').strip().lower()
+    if scope not in ('full', 'selection'):
+        scope = 'full'
     if action not in AI_WRITING_ACTIONS:
         return jsonify({'ok': False, 'error': 'Invalid action.'}), 400
     max_in = _ai_max_input_chars()
@@ -1383,7 +2083,9 @@ def admin_ai_writing():
             'ok': False,
             'error': f'Content too large for AI (max {max_in} characters). Shorten the draft or raise AI_MAX_INPUT_CHARS.',
         }), 400
-    result, err = rewrite_editor_html(content, AI_WRITING_ACTIONS[action])
+    instruction = _ai_instruction_for(action, scope)
+    temp = AI_ACTION_TEMPERATURE.get(action, 0.25)
+    result, err = rewrite_editor_html(content, instruction, temperature=temp)
     if err:
         return jsonify({'ok': False, 'error': err}), 503
     return jsonify({'ok': True, 'result': result})

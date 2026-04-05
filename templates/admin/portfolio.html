@@ -1,0 +1,235 @@
+{% extends "admin/base.html" %}
+{% block title %}Portfolio{% endblock %}
+{% block page_title %}Portfolio & achievements{% endblock %}
+
+{% block content %}
+<p style="color:var(--text-2); font-size:0.9rem; max-width:760px; margin-bottom:1.25rem;">
+  Edit the public <a href="{{ url_for('portfolio') }}" target="_blank" rel="noopener">Portfolio</a> page.
+  Use plain fields below — no JSON. Optional images make work items stand out; certificates can attach a PDF or scan.
+</p>
+
+<div class="admin-card" style="max-width:900px; margin-bottom:1.5rem;">
+  <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:0.75rem;">Review uploads</h3>
+  <p class="form-hint" style="margin-bottom:0.85rem;">Quick check of everything stored for this page (open each link to verify the file).</p>
+  <ul style="margin:0; padding-left:1.2rem; line-height:1.85; font-size:0.9rem; color:var(--text-2);">
+    <li>
+      <strong style="color:var(--text);">CV (PDF)</strong> —
+      {% if cv_path %}
+      <a href="{{ cv_path|asset }}" target="_blank" rel="noopener">Open / download</a>
+      <code style="font-size:0.68rem; margin-left:0.35rem; word-break:break-all;">{{ cv_path }}</code>
+      <form method="POST" style="display:inline; margin-left:0.5rem;" onsubmit="return confirm('Remove the CV from the site?');">
+        <input type="hidden" name="action" value="remove_cv" />
+        <button type="submit" class="btn btn-outline btn-sm" style="padding:0.2rem 0.5rem; font-size:0.72rem;">Remove CV</button>
+      </form>
+      {% else %}
+      <span style="color:var(--text-3);">None on file — upload a PDF below.</span>
+      {% endif %}
+    </li>
+    <li><strong style="color:var(--text);">Work item images</strong> — {{ items|selectattr('image')|list|length }} of {{ items|length }} item(s) include a photo.</li>
+    <li><strong style="color:var(--text);">Certificate / award files</strong> — {{ credentials|selectattr('attachment')|list|length }} of {{ credentials|length }} entry(ies) have a PDF or image attached.</li>
+  </ul>
+</div>
+
+<!-- Intro + CV -->
+<form method="POST" enctype="multipart/form-data" class="admin-card" style="max-width:900px; margin-bottom:1.5rem;">
+  <input type="hidden" name="action" value="save_intro" />
+  <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:1rem;">Page intro & CV</h3>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Intro (English)</label>
+      <textarea name="portfolio_intro_en" class="form-textarea" rows="3">{{ intro_en }}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Intro (Kiswahili)</label>
+      <textarea name="portfolio_intro_sw" class="form-textarea" rows="3">{{ intro_sw }}</textarea>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">CV (PDF)</label>
+    {% if cv_path %}
+    <p class="form-hint" style="margin-bottom:0.5rem;">
+      Replacing upload keeps the same site setting; old file may remain on disk or cloud until you delete it there.
+      Current: <a href="{{ cv_path|asset }}" target="_blank" rel="noopener">View / download</a>
+    </p>
+    {% endif %}
+    <label class="file-upload-zone" style="max-width:420px;">
+      <input type="file" name="cv" accept=".pdf,application/pdf" />
+      <span style="font-size:0.8rem;">Choose PDF (any case: .pdf) — then click Save below</span>
+    </label>
+  </div>
+  <button type="submit" class="btn btn-gold"><i class="fas fa-save"></i> Save intro & CV</button>
+</form>
+
+<!-- Work items -->
+<div class="admin-card" style="max-width:900px; margin-bottom:1.5rem;">
+  <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:1rem;">Work & projects</h3>
+  {% for item in items %}
+  <div style="border:1px solid var(--border); border-radius:12px; padding:1.25rem; margin-bottom:1.25rem; background:var(--bg-3);">
+    <form method="POST" enctype="multipart/form-data" style="margin:0;">
+      <input type="hidden" name="action" value="update_item" />
+      <input type="hidden" name="item_id" value="{{ item.id }}" />
+      <div class="form-row" style="display:grid; grid-template-columns: 80px 1fr 1fr; gap:0.75rem; align-items:end;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Icon</label>
+          <input type="text" name="icon" class="form-input" maxlength="8" value="{{ item.icon }}" placeholder="📌" />
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Sort #</label>
+          <input type="number" name="sort_order" class="form-input" value="{{ item.sort_order }}" style="max-width:100px;" />
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Year</label>
+          <input type="text" name="year" class="form-input" value="{{ item.year }}" placeholder="2024" />
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:0.75rem;">
+        <div class="form-group">
+          <label class="form-label">Category (EN)</label>
+          <input type="text" name="category_en" class="form-input" value="{{ item.category_en }}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category (SW)</label>
+          <input type="text" name="category_sw" class="form-input" value="{{ item.category_sw }}" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Title (EN)</label>
+          <input type="text" name="title_en" class="form-input" value="{{ item.title_en }}" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Title (SW)</label>
+          <input type="text" name="title_sw" class="form-input" value="{{ item.title_sw }}" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Description (EN)</label>
+          <textarea name="desc_en" class="form-textarea" rows="2">{{ item.desc_en }}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description (SW)</label>
+          <textarea name="desc_sw" class="form-textarea" rows="2">{{ item.desc_sw }}</textarea>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Photo (optional)</label>
+        {% if item.image %}
+        <p class="form-hint" style="margin-bottom:0.35rem;"><img src="{{ item.image|asset }}" alt="" style="max-height:80px;border-radius:8px;border:1px solid var(--border);" /></p>
+        {% endif %}
+        <input type="file" name="image" accept="image/*" class="form-input" style="padding:0.5rem;" />
+      </div>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem;">
+        <button type="submit" class="btn btn-outline btn-sm"><i class="fas fa-save"></i> Save item</button>
+      </div>
+    </form>
+    <form method="POST" action="{{ url_for('admin_portfolio_item_delete', item_id=item.id) }}" style="margin-top:0.75rem;" onsubmit="return confirm('Remove this work item?');">
+      <button type="submit" class="btn btn-outline btn-sm" style="border-color:rgba(220,80,80,0.5);color:#e07070;"><i class="fas fa-trash"></i> Delete</button>
+    </form>
+  </div>
+  {% else %}
+  <p style="color:var(--text-3); font-size:0.9rem;">No work items yet — add one below.</p>
+  {% endfor %}
+
+  <h4 style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-3); margin:1.5rem 0 0.75rem;">Add work item</h4>
+  <form method="POST" enctype="multipart/form-data" style="border:1px dashed var(--border); border-radius:12px; padding:1.25rem;">
+    <input type="hidden" name="action" value="add_item" />
+    <div class="form-row" style="display:grid; grid-template-columns: 80px 1fr; gap:0.75rem;">
+      <div class="form-group"><label class="form-label">Icon</label><input type="text" name="icon" class="form-input" maxlength="8" placeholder="📌" /></div>
+      <div class="form-group"><label class="form-label">Year</label><input type="text" name="year" class="form-input" placeholder="2024" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Category (EN)</label><input type="text" name="category_en" class="form-input" /></div>
+      <div class="form-group"><label class="form-label">Category (SW)</label><input type="text" name="category_sw" class="form-input" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Title (EN) *</label><input type="text" name="title_en" class="form-input" required /></div>
+      <div class="form-group"><label class="form-label">Title (SW)</label><input type="text" name="title_sw" class="form-input" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Description (EN)</label><textarea name="desc_en" class="form-textarea" rows="2"></textarea></div>
+      <div class="form-group"><label class="form-label">Description (SW)</label><textarea name="desc_sw" class="form-textarea" rows="2"></textarea></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Photo (optional)</label>
+      <input type="file" name="image" accept="image/*" class="form-input" style="padding:0.5rem;" />
+    </div>
+    <button type="submit" class="btn btn-gold btn-sm"><i class="fas fa-plus"></i> Add work item</button>
+  </form>
+</div>
+
+<!-- Certificates -->
+<div class="admin-card" style="max-width:900px;">
+  <h3 style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-3); margin-bottom:1rem;">Certificates, awards & achievements</h3>
+  {% for c in credentials %}
+  <div style="border:1px solid var(--border); border-radius:12px; padding:1.25rem; margin-bottom:1.25rem; background:var(--bg-3);">
+    <form method="POST" enctype="multipart/form-data" style="margin:0;">
+      <input type="hidden" name="action" value="update_credential" />
+      <input type="hidden" name="credential_id" value="{{ c.id }}" />
+      <div class="form-row" style="display:grid; grid-template-columns: 80px 1fr 1fr; gap:0.75rem; align-items:end;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Icon</label>
+          <input type="text" name="icon" class="form-input" maxlength="8" value="{{ c.icon }}" />
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Sort #</label>
+          <input type="number" name="sort_order" class="form-input" value="{{ c.sort_order }}" style="max-width:100px;" />
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Year</label>
+          <input type="text" name="year" class="form-input" value="{{ c.year }}" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Title (EN)</label><input type="text" name="title_en" class="form-input" value="{{ c.title_en }}" /></div>
+        <div class="form-group"><label class="form-label">Title (SW)</label><input type="text" name="title_sw" class="form-input" value="{{ c.title_sw }}" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Detail (EN)</label><textarea name="detail_en" class="form-textarea" rows="2">{{ c.detail_en }}</textarea></div>
+        <div class="form-group"><label class="form-label">Detail (SW)</label><textarea name="detail_sw" class="form-textarea" rows="2">{{ c.detail_sw }}</textarea></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">File (PDF or image)</label>
+        {% if c.attachment %}
+        <p class="form-hint" style="margin-bottom:0.35rem;">
+          <a href="{{ c.attachment|asset }}" target="_blank" rel="noopener">Current file</a>
+          {% if c.attachment|attachment_kind == 'image' %}
+          <br /><img src="{{ c.attachment|asset }}" alt="" style="max-height:72px;margin-top:0.35rem;border-radius:8px;" />
+          {% endif %}
+        </p>
+        {% endif %}
+        <input type="file" name="attachment" accept=".pdf,image/*" class="form-input" style="padding:0.5rem;" />
+      </div>
+      <button type="submit" class="btn btn-outline btn-sm"><i class="fas fa-save"></i> Save</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin_portfolio_credential_delete', cred_id=c.id) }}" style="margin-top:0.75rem;" onsubmit="return confirm('Remove this entry?');">
+      <button type="submit" class="btn btn-outline btn-sm" style="border-color:rgba(220,80,80,0.5);color:#e07070;"><i class="fas fa-trash"></i> Delete</button>
+    </form>
+  </div>
+  {% else %}
+  <p style="color:var(--text-3); font-size:0.9rem;">No certificates yet — add one below.</p>
+  {% endfor %}
+
+  <h4 style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-3); margin:1.5rem 0 0.75rem;">Add certificate / award</h4>
+  <form method="POST" enctype="multipart/form-data" style="border:1px dashed var(--border); border-radius:12px; padding:1.25rem;">
+    <input type="hidden" name="action" value="add_credential" />
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Icon</label><input type="text" name="icon" class="form-input" maxlength="8" placeholder="🏆" /></div>
+      <div class="form-group"><label class="form-label">Year</label><input type="text" name="year" class="form-input" placeholder="2024" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Title (EN) *</label><input type="text" name="title_en" class="form-input" required /></div>
+      <div class="form-group"><label class="form-label">Title (SW)</label><input type="text" name="title_sw" class="form-input" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Detail (EN)</label><textarea name="detail_en" class="form-textarea" rows="2"></textarea></div>
+      <div class="form-group"><label class="form-label">Detail (SW)</label><textarea name="detail_sw" class="form-textarea" rows="2"></textarea></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Upload PDF or image</label>
+      <input type="file" name="attachment" accept=".pdf,image/*" class="form-input" style="padding:0.5rem;" />
+    </div>
+    <button type="submit" class="btn btn-gold btn-sm"><i class="fas fa-plus"></i> Add entry</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ subject_line }}</title>
+  <style>
+    body { margin: 0; background: #f4f4f4; font-family: Arial, Helvetica, sans-serif; }
+    .email-container { max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .header { background: #1e1e2f; color: #ffffff; padding: 20px; text-align: center; font-size: 18px; font-weight: bold; }
+    .content { padding: 24px 20px; font-size: 15px; line-height: 1.65; color: #333333; }
+    .content a { color: #6c5ce7; }
+    .footer { background: #fafafa; padding: 18px 16px; text-align: center; font-size: 12px; color: #999999; line-height: 1.5; }
+    .footer a { color: #6c5ce7; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">{{ header_title }}</div>
+    <div class="content">{{ body_html | safe }}</div>
+    <div class="footer">
+      {{ footer_note }}<br>
+      {% if site_url %}
+      <a href="{{ site_url }}">{{ visit_label }}</a>
+      {% endif %}
+      {% if unsubscribe_mailto %}
+      {% if site_url %}&nbsp;|&nbsp;{% endif %}<a href="{{ unsubscribe_mailto }}">{{ unsubscribe_label }}</a>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
