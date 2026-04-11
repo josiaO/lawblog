@@ -120,7 +120,7 @@ if _is_production_deployment():
             'frame-src': ["'self'", "https://www.google.com"],
             'connect-src': ["'self'", "https://*"],
         },
-        content_security_policy_nonce=True,
+        content_security_policy_nonce_in=['script-src', 'style-src'],
         force_https=True,
         strict_transport_security=True,
         session_cookie_secure=True
