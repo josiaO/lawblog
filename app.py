@@ -2509,17 +2509,32 @@ def admin_delete_comment(comment_id):
 def init_db():
     with app.app_context():
         db.create_all()
-        if not User.query.first():
-            admin_email = os.environ.get('ADMIN_EMAIL')
-            admin_password = os.environ.get('ADMIN_PASSWORD')
-            if not admin_email or not admin_password:
-                print("❌ ADMIN_EMAIL and ADMIN_PASSWORD must be set in .env")
-                return
-            user = User(email=admin_email)
-            user.set_password(admin_password)
-            db.session.add(user)
-            db.session.commit()
-            print(f"✅ Admin created: {admin_email}")
+        admin_email = os.environ.get('ADMIN_EMAIL')
+        admin_password = os.environ.get('ADMIN_PASSWORD')
+        
+        if admin_email and admin_password:
+            # Ensure the primary admin exists and has the correct password
+            user = User.query.filter_by(email=admin_email).first()
+            if not user:
+                user = User(email=admin_email)
+                user.set_password(admin_password)
+                db.session.add(user)
+                db.session.commit()
+                print(f"✅ Admin created: {admin_email}")
+            else:
+                user.set_password(admin_password)
+                db.session.commit()
+                print(f"✅ Admin password updated: {admin_email}")
+            
+            # Cleanup default admin if applicable
+            if admin_email != 'admin@example.com':
+                default_admin = User.query.filter_by(email='admin@example.com').first()
+                if default_admin:
+                    db.session.delete(default_admin)
+                    db.session.commit()
+                    print("🗑️ Removed default admin@example.com")
+        elif not User.query.first():
+            print("❌ ADMIN_EMAIL and ADMIN_PASSWORD must be set in .env to initialize the admin.")
 
 
 if __name__ == '__main__':
