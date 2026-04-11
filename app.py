@@ -134,12 +134,15 @@ if _is_production_deployment():
 else:
     talisman.init_app(app, force_https=False, content_security_policy=None)
 
-# Performance: add cache-control headers to static files
+# Performance: cache-control for static files (JS/CSS short TTL so fixes reach browsers quickly)
 @app.after_request
 def add_header(response):
-    # If the response is for a static file, cache it for 1 year
     if request.path.startswith('/static/') and response.status_code == 200:
-        response.headers['Cache-Control'] = 'public, max-age=31536000'
+        p = request.path.lower()
+        if p.endswith('.js') or p.endswith('.css') or '/static/js/' in p or '/static/css/' in p:
+            response.headers['Cache-Control'] = 'public, max-age=600, must-revalidate'
+        else:
+            response.headers['Cache-Control'] = 'public, max-age=31536000'
     return response
 
 # Custom error handlers
@@ -887,9 +890,21 @@ def save_upload(file, subfolder='', resize=None):
 
 
 def verify_recaptcha(token):
-    secret = os.environ.get('RECAPTCHA_SECRET_KEY', '')
+    """
+    Enforce v3 only when *both* site key and secret are configured.
+    If only the secret is set, the browser never loads grecaptcha (no RECAPTCHA_SITE_KEY),
+    so every subscribe would fail with an empty token — treat that as misconfiguration and skip.
+    """
+    secret = (os.environ.get('RECAPTCHA_SECRET_KEY') or '').strip()
+    site_key = (os.environ.get('RECAPTCHA_SITE_KEY') or '').strip()
     if not secret or secret == 'your-recaptcha-secret-key':
-        return True  # skip in dev
+        return True  # disabled / dev
+    if not site_key or site_key == 'your-recaptcha-site-key':
+        app.logger.warning(
+            'RECAPTCHA_SECRET_KEY is set but RECAPTCHA_SITE_KEY is missing or a placeholder; '
+            'skipping verification until both are set (otherwise subscribe cannot obtain a token).'
+        )
+        return True
     if not (token or '').strip():
         return False
     resp = requests.post('https://www.google.com/recaptcha/api/siteverify',
