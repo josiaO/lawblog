@@ -20,7 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => el.remove(), 4500);
   });
 
-  // Sidebar toggle for mobile
+  // Sidebar toggle for mobile (overlay + close + Escape only — no document click,
+  // which can race with touch/click on phones and close the drawer immediately.)
   const sidebar = document.getElementById('adminSidebar');
   const toggle = document.getElementById('sidebarToggle');
   const overlay = document.getElementById('sidebarOverlay');
@@ -35,21 +36,15 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   if (toggle) {
-    toggle.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
+    toggle.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
       toggleSidebar();
     });
   }
-  if (overlay) overlay.addEventListener('click', () => toggleSidebar(false));
-  if (closeBtn) closeBtn.addEventListener('click', () => toggleSidebar(false));
 
-  // Close sidebar when clicking outside on mobile (bubble phase, after toggle handler)
-  document.addEventListener('click', function (e) {
-    if (!sidebar || !sidebar.classList.contains('open')) return;
-    if (sidebar.contains(e.target) || (toggle && toggle.contains(e.target))) return;
-    toggleSidebar(false);
-  });
+  if (overlay) overlay.addEventListener('click', function () { toggleSidebar(false); });
+  if (closeBtn) closeBtn.addEventListener('click', function () { toggleSidebar(false); });
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;

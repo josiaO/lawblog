@@ -198,7 +198,7 @@
         {% if lang=='en' %}Get new essays delivered straight to your inbox.{% else %}Pata makala mpya moja kwa moja kwenye barua pepe yako.{% endif %}
       </p>
     </div>
-    <button onclick="document.getElementById('newsletterModal').classList.add('open')" class="btn-primary">
+    <button type="button" class="btn-primary" data-open-newsletter>
       {% if lang=='en' %}Subscribe{% else %}Jiunge{% endif %}
     </button>
   </div>

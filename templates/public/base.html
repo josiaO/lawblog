@@ -132,7 +132,7 @@
       <div class="newsletter-form" id="newsletterForm">
         <input type="text" id="subName" placeholder="{{ 'Your name (optional)' if lang=='en' else 'Jina (si lazima)' }}" class="sub-input" />
         <input type="email" id="subEmail" placeholder="{{ 'your@email.com' }}" class="sub-input" required />
-        <button type="button" class="sub-btn" id="subBtn" onclick="submitSubscribe()"
+        <button type="button" class="sub-btn" id="subBtn"
           data-label="{{ 'Subscribe' if lang=='en' else 'Jiunge' }}"
           data-busy="{{ '…' if lang=='en' else '…' }}">
           {{ 'Subscribe' if lang=='en' else 'Jiunge' }}
@@ -174,7 +174,7 @@
     </div>
 
     <div class="footer-actions">
-      <button class="footer-subscribe-btn" onclick="document.getElementById('newsletterModal').classList.add('open')">
+      <button type="button" class="footer-subscribe-btn" id="footerSubscribeBtn" data-open-newsletter>
         {{ '✉ Subscribe to Newsletter' if lang=='en' else '✉ Jiunge na jarida' }}
       </button>
     </div>

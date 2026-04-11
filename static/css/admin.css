@@ -341,15 +341,28 @@ img { max-width: 100%; }
 
 /* Responsive */
 @media (max-width: 768px) {
+  /* Main above inert overlay so taps (hamburger) always hit the header, not a transparent layer. */
+  .admin-main {
+    position: relative;
+    z-index: 10;
+  }
   .admin-sidebar {
     position: fixed; left: -260px; top: 0; bottom: 0; 
     width: 260px; max-width: 85vw;
-    z-index: 1000;
+    z-index: 9;
     transition: left 0.3s ease;
     overflow-x: hidden;
   }
-  .admin-sidebar.open { left: 0; }
-  .sidebar-toggle { display: flex; }
+  .admin-sidebar.open {
+    left: 0;
+    z-index: 1200;
+  }
+  .sidebar-toggle {
+    display: flex;
+    touch-action: manipulation;
+    position: relative;
+    z-index: 30;
+  }
   .sidebar-close {
     display: flex; align-items: center; justify-content: center;
     width: 32px; height: 32px;
@@ -363,12 +376,17 @@ img { max-width: 100%; }
   .sidebar-overlay {
     position: fixed; inset: 0;
     background: rgba(0,0,0,0.5);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
-    z-index: 900;
+    z-index: 8;
     opacity: 0; pointer-events: none;
     transition: opacity 0.3s ease;
   }
-  .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+  .sidebar-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1150;
+  }
   
   body.sidebar-open { overflow: hidden; }
   .stat-grid { grid-template-columns: 1fr; }

@@ -84,6 +84,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  document.addEventListener('click', function (e) {
+    const opener = e.target.closest('[data-open-newsletter]');
+    if (!opener) return;
+    e.preventDefault();
+    const m = document.getElementById('newsletterModal');
+    if (m) m.classList.add('open');
+  });
+
+  const subBtn = document.getElementById('subBtn');
+  if (subBtn) {
+    subBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      submitSubscribe();
+    });
+  }
+
   /* Flash message auto-dismiss */
   document.querySelectorAll('.flash').forEach(el => {
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.5s'; }, 4000);
@@ -92,31 +108,58 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
-/* Newsletter subscribe */
+function waitForGrecaptcha(timeoutMs) {
+  var siteKey = (document.body.dataset.recaptchaKey || '').trim();
+  if (!siteKey) return Promise.resolve(true);
+  var deadline = Date.now() + timeoutMs;
+  return new Promise(function (resolve) {
+    (function poll() {
+      if (typeof grecaptcha !== 'undefined') {
+        resolve(true);
+        return;
+      }
+      if (Date.now() > deadline) {
+        resolve(false);
+        return;
+      }
+      setTimeout(poll, 80);
+    })();
+  });
+}
+
+/* Newsletter subscribe — form POST so Flask-WTF reads csrf_token from request.form */
 async function submitSubscribe() {
   const emailInput = document.getElementById('subEmail');
   const nameInput = document.getElementById('subName');
   const btn = document.getElementById('subBtn');
   const result = document.getElementById('subResult');
-  const email = (emailInput?.value || '').trim();
-  const name = (nameInput?.value || '').trim();
-  const labelBusy = btn?.dataset?.busy || '…';
-  const labelDefault = btn?.dataset?.label || btn?.textContent?.trim() || 'Subscribe';
+  if (!btn || !emailInput) return;
 
-  if (!email) { showResult(result, 'Please enter your email.', false); return; }
+  const email = (emailInput.value || '').trim();
+  const name = nameInput ? (nameInput.value || '').trim() : '';
+  const labelBusy = btn.dataset.busy || '…';
+  const labelDefault = btn.dataset.label || btn.textContent.trim() || 'Subscribe';
+
+  if (!email) {
+    showResult(result, 'Please enter your email.', false);
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = labelBusy;
 
-  let token = '';
-  const siteKey = (document.body.dataset.recaptchaKey || '').trim();
+  var token = '';
+  var siteKey = (document.body.dataset.recaptchaKey || '').trim();
   if (siteKey) {
-    if (typeof grecaptcha === 'undefined') {
-      showResult(
-        result,
-        'Security check is still loading. Wait a moment and try again.',
-        false
-      );
+    var loaded = await waitForGrecaptcha(15000);
+    if (!loaded) {
+      if (result) {
+        showResult(
+          result,
+          'Security check timed out. Check your connection, disable blockers for this site, and try again.',
+          false
+        );
+      }
       btn.disabled = false;
       btn.textContent = labelDefault;
       return;
@@ -132,37 +175,51 @@ async function submitSubscribe() {
     }
   }
 
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  var csrf = document.querySelector('meta[name="csrf-token"]');
+  csrf = csrf ? csrf.getAttribute('content') || '' : '';
+  var body = new URLSearchParams();
+  body.set('csrf_token', csrf);
+  body.set('email', email);
+  body.set('name', name);
+  body.set('recaptcha_token', token);
+
   try {
-    const res = await fetch('/subscribe', {
+    var res = await fetch('/subscribe', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        Accept: 'application/json',
         'X-CSRFToken': csrf,
       },
-      body: JSON.stringify({ email, name, recaptcha_token: token })
+      credentials: 'same-origin',
+      body: body.toString(),
     });
-    let data = {};
+    var data = {};
     try {
       data = await res.json();
     } catch (parseErr) {
-      showResult(result, 'Something went wrong. Please try again.', false);
+      if (result) showResult(result, 'Something went wrong. Please try again.', false);
       btn.disabled = false;
       btn.textContent = labelDefault;
       return;
     }
-    const ok = !!data.ok;
-    showResult(result, data.msg || (ok ? 'Thank you!' : 'Something went wrong.'), ok);
-    if (ok) { emailInput.value = ''; if (nameInput) nameInput.value = ''; }
+    var ok = !!data.ok;
+    if (result) {
+      showResult(result, data.msg || (ok ? 'Thank you!' : 'Something went wrong.'), ok);
+    }
+    if (ok) {
+      emailInput.value = '';
+      if (nameInput) nameInput.value = '';
+    }
   } catch (e) {
-    showResult(result, 'Something went wrong. Please try again.', false);
+    if (result) showResult(result, 'Something went wrong. Please try again.', false);
   }
   btn.disabled = false;
   btn.textContent = labelDefault;
 }
 
 function showResult(el, msg, ok) {
+  if (!el) return;
   el.textContent = msg;
   el.className = 'sub-result ' + (ok ? 'ok' : 'err');
   el.style.display = 'block';

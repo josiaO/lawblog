@@ -100,6 +100,9 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'}
 
 db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
+# Fetch/JSON posts do not populate request.form; strict Referrer checks also fail on some
+# mobile / privacy settings when only X-CSRFToken is sent. The signed token is sufficient.
+app.config['WTF_CSRF_SSL_STRICT'] = False
 login_manager = LoginManager(app)
 login_manager.login_view = 'admin_login'
 
@@ -1571,9 +1574,20 @@ def public_cv_pdf():
     )
 
 
+def _subscribe_request_data():
+    """Merge JSON and form bodies so CSRF can live in form fields (Flask-WTF reads request.form first)."""
+    out = {}
+    j = request.get_json(silent=True)
+    if isinstance(j, dict):
+        out.update(j)
+    if request.form:
+        out.update(request.form.to_dict(flat=True))
+    return out
+
+
 @app.route('/subscribe', methods=['POST'])
 def subscribe():
-    data = request.get_json(silent=True) or {}
+    data = _subscribe_request_data()
     email = (data.get('email') or '').strip().lower()
     name = (data.get('name') or '').strip()
     token = data.get('recaptcha_token', '')
