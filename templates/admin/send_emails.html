@@ -1,0 +1,183 @@
+{% extends "admin/base.html" %}
+{% block title %}Send Emails{% endblock %}
+{% block page_title %}Send Email Update{% endblock %}
+
+{% block head %}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+<style>
+  .compose-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-width: 900px;
+    margin: 0 auto;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .compose-header {
+    background: var(--bg-3);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .compose-body {
+    padding: 1.5rem;
+  }
+  .compose-field {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .compose-label {
+    color: var(--text-3);
+    font-size: 0.9rem;
+    width: 70px;
+    flex-shrink: 0;
+  }
+  .compose-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    padding: 0.25rem 0;
+  }
+  
+  /* Quill — dark admin theme overrides */
+  .quill-wrap {
+    margin-top: 1.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #13131c;
+  }
+  .ql-toolbar.ql-snow {
+    background: #1e1e2e !important;
+    border: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 8px !important;
+  }
+  .ql-container.ql-snow {
+    border: none !important;
+    min-height: 400px;
+    font-family: inherit;
+    font-size: 1rem;
+  }
+  .ql-editor {
+    min-height: 400px;
+    color: #e8e6f0;
+    line-height: 1.6;
+  }
+  .ql-editor.ql-blank::before {
+    color: #6b6980;
+    font-style: normal;
+  }
+  
+  [data-theme="light"] .quill-wrap {
+    background: #fff;
+    border-color: #ddd;
+  }
+  [data-theme="light"] .ql-toolbar.ql-snow {
+    background: #f8f9fa !important;
+  }
+  [data-theme="light"] .ql-editor {
+    color: #333;
+  }
+
+  .compose-footer {
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-3);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .body-field-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    border: 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="compose-card">
+  <div class="compose-header">
+    <span style="font-weight: 600; font-size: 0.95rem;">New Message</span>
+    <span style="font-size: 0.8rem; color: var(--text-3);">To: {{ count }} active subscribers</span>
+  </div>
+  
+  <form method="POST" id="composeForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <textarea name="body" id="bodyField" class="body-field-hidden"></textarea>
+    
+    <div class="compose-body">
+      <div class="compose-field">
+        <label class="compose-label">Subject</label>
+        <input type="text" name="subject" class="compose-input" required maxlength="200"
+               placeholder="Enter subject line..."
+               value="{{ request.form.get('subject', '') }}" />
+      </div>
+      
+      <div class="quill-wrap">
+        <div id="emailEditor"></div>
+      </div>
+    </div>
+    
+    <div class="compose-footer">
+      <button type="submit" class="btn btn-gold btn-lg" onclick="return confirm('Send this email to all {{ count }} active subscribers?');">
+        <i class="fas fa-paper-plane"></i> &nbsp; Send Now
+      </button>
+      <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">Discard</a>
+      
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem; color: var(--text-3); font-size: 0.8rem;">
+        <i class="fas fa-shield-alt"></i>
+        <span>Sanitized & Secure</span>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script>
+  var quill = new Quill('#emailEditor', {
+    theme: 'snow',
+    placeholder: 'Write your message here...',
+    modules: {
+      toolbar: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        ['blockquote', 'link'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['clean']
+      ]
+    }
+  });
+
+  // Seed with previous content if any
+  {% set prev_body = request.form.get('body', '') %}
+  {% if prev_body %}
+    quill.root.innerHTML = {{ prev_body|tojson }};
+  {% endif %}
+
+  // Sync Quill content to hidden textarea on form submit
+  var form = document.getElementById('composeForm');
+  form.onsubmit = function() {
+    var body = document.querySelector('textarea[name=body]');
+    body.value = quill.root.innerHTML;
+  };
+</script>
+{% endblock %}

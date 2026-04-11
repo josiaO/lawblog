@@ -53,8 +53,8 @@
       <button type="button" class="sidebar-link sidebar-link-btn" id="adminHelpFromSidebar" title="Open help assistant">
         <i class="fas fa-robot"></i> Help assistant
       </button>
-      <a href="{{ url_for('admin_broadcast') }}" class="sidebar-link {% if request.endpoint=='admin_broadcast' %}active{% endif %}">
-        <i class="fas fa-bullhorn"></i> Email subscribers
+      <a href="{{ url_for('admin_send_emails') }}" class="sidebar-link {% if request.endpoint=='admin_send_emails' %}active{% endif %}">
+        <i class="fas fa-paper-plane"></i> Send Emails
       </a>
       <a href="{{ url_for('admin_settings') }}" class="sidebar-link {% if request.endpoint=='admin_settings' %}active{% endif %}">
         <i class="fas fa-cog"></i> Site Settings

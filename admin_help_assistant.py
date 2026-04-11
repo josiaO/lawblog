@@ -69,7 +69,7 @@ ADMIN_HELP_INTENTS: list[dict[str, Any]] = [
 • **Subscribers** — people who joined your newsletter.
 • **Comments** — reader comments on posts (you can remove one if needed).
 • **Portfolio** — your public portfolio page: intro, CV PDF, work items, certificates.
-• **Email subscribers** — send one email to everyone on your newsletter list.
+• **Send Emails** — send one email to everyone on your newsletter list.
 • **Site Settings** — site name, bio, social links, logo, banner, CV, and more.
 
 Use the gold **Save** buttons after you change something. Open **View Site** to see the public pages.""",
@@ -80,7 +80,7 @@ Use the gold **Save** buttons after you change something. Open **View Site** to 
 • **Subscribers** — waliojiunga na jarida lako.
 • **Comments** — maoni ya wasomaji (unaweza kufuta moja moja).
 • **Portfolio** — ukurasa wa umma: utangulizi, CV (PDF), kazi, vyeti.
-• **Email subscribers** — barua moja kwa wote waliojiunga na jarida.
+• **Send Emails** — barua moja kwa wote waliojiunga na jarida.
 • **Site Settings** — jina, wasifu, mitandao, nembo, bango, CV, n.k.
 
 Bonyeza **Save** baada ya mabadiliko. **View Site** inaonyesha tovuti ya umma.""",
@@ -329,19 +329,19 @@ Chagua faili kisha **Save All Settings**. `.pdf` au `.PDF` zote zinafanya kazi."
         ),
         """**Newsletter and email**
 
-People who sign up on your site are listed under **Subscribers**. To email them all at once, use **Email subscribers** in the sidebar.
+People who sign up on your site are listed under **Subscribers**. To email them all at once, use **Send Emails** in the sidebar.
 
 Welcome messages and “new post” notices usually need your **sending address** to be verified once with your email provider — whoever set up the site normally handles that.
 
 In **Site Settings**, you can use **Send test email** to see if mail reaches your own inbox.""",
         """**Jarida na barua pepe**
 
-Waliojiunga kwenye tovuti wako orodha ya **Subscribers**. Kutuma barua kwa wote: **Email subscribers** kwenye menyu ya kando.
+Waliojiunga kwenye tovuti wako orodha ya **Subscribers**. Kutuma barua kwa wote: **Send Emails** kwenye menyu ya kando.
 
 Ujumbe wa karibu na arifa za makala mpya mara nyingi huhitaji **anwani ya kutuma** kuthibitishwa — mtu aliyeweka tovuti huifanya mara moja.
 
 **Site Settings** — **Send test email** kuona kama barua inafika kwako.""",
-        ('admin_settings', 'admin_broadcast', 'admin_subscribers'),
+        ('admin_settings', 'admin_send_emails', 'admin_subscribers'),
     ),
     _intent(
         'subscribers_page',
@@ -351,9 +351,9 @@ Ujumbe wa karibu na arifa za makala mpya mara nyingi huhitaji **anwani ya kutuma
         (
             'waliojiunga', 'orodha', 'subscribers',
         ),
-        """**Subscribers** shows everyone who joined your newsletter on the site. To send them an email, use **Email subscribers**. New posts may also trigger an automatic notice if that was set up for your site.""",
-        """**Subscribers** inaonyesha waliojiunga na jarida. Kutuma barua: **Email subscribers**. Makala mpya zinaweza kutuma arifa kiotomatiki ikiwa hilo limewashwa.""",
-        ('admin_subscribers', 'admin_broadcast'),
+        """**Subscribers** shows everyone who joined your newsletter on the site. To send them an email, use **Send Emails**. New posts may also trigger an automatic notice if that was set up for your site.""",
+        """**Subscribers** inaonyesha waliojiunga na jarida. Kutuma barua: **Send Emails**. Makala mpya zinaweza kutuma arifa kiotomatiki ikiwa hilo limewashwa.""",
+        ('admin_subscribers', 'admin_send_emails'),
     ),
     _intent(
         'broadcast',
@@ -363,13 +363,13 @@ Ujumbe wa karibu na arifa za makala mpya mara nyingi huhitaji **anwani ya kutuma
         (
             'tuma barua', 'wat wote', 'broadcast', 'tangazo',
         ),
-        """**Email subscribers** — write a **subject** and your **message** (you can use bold text and links, like in an email). Press send. Everyone on the list receives it.
+        """**Send Emails** — write a **subject** and your **message** (you can use bold text and links, like in an email). Press send. Everyone on the list receives it.
 
 Sending can take a little while. If nothing arrives, ask whoever manages your site’s email setup to check that sending is allowed and the address is verified.""",
-        """**Email subscribers** — andika **mada** na **ujumbe** (unaweza tumia maandishi mazito na viungo). Bonyeza tuma. Kila aliyejiunga atapokea.
+        """**Send Emails** — andika **mada** na **ujumbe** (unaweza tumia maandishi mazito na viungo). Bonyeza tuma. Kila aliyejiunga atapokea.
 
 Kutuma kunaweza kuchukua muda. Ikiwa hakuna kitu kinachofika, muulize anayesimamia barua pepe ya tovuti.""",
-        ('admin_broadcast',),
+        ('admin_send_emails',),
     ),
     _intent(
         'comments_admin',

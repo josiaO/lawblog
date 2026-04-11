@@ -665,25 +665,35 @@ def schedule_subscriber_broadcast(subject, inner_html_sanitized):
 
     def worker():
         with app_obj.app_context():
+            app.logger.info('Starting subscriber broadcast background worker.')
             if not brevo_transactional_ready():
-                app.logger.error('Broadcast skipped: Brevo transactional not configured.')
+                app.logger.error('Broadcast skipped: Brevo transactional not configured (check keys).')
                 return
             subs = Subscriber.query.filter_by(active=True).all()
             if not subs:
-                app.logger.info('Broadcast skipped: no active subscribers.')
+                app.logger.info('Broadcast skipped: no active subscribers found.')
                 return
+            
+            app.logger.info('Preparing email for %d subscribers...', len(subs))
             html = _render_announcement_email(subject, inner_html_sanitized)
             plain = _html_to_text_fallback(inner_html_sanitized)
             subj = subject[:998]
+            
             ok, fail = 0, 0
             for sub in subs:
-                if brevo_send_transactional(sub.email, sub.name or '', subj, html, text_content=plain):
-                    ok += 1
-                else:
+                try:
+                    if brevo_send_transactional(sub.email, sub.name or '', subj, html, text_content=plain):
+                        ok += 1
+                    else:
+                        fail += 1
+                        app.logger.warning('Failed to send broadcast to %s', sub.email)
+                except Exception as e:
                     fail += 1
-                time.sleep(0.12)
+                    app.logger.error('Critical failure sending broadcast to %s: %s', sub.email, str(e))
+                time.sleep(0.15)
+            
             app.logger.info(
-                'Subscriber broadcast finished: sent=%s failed=%s subject=%r',
+                'Subscriber broadcast finished. SUCCESS: %d, FAILED: %d, SUBJECT: %r',
                 ok, fail, subj[:80],
             )
 
@@ -917,16 +927,19 @@ def _brevo_sender_domain_likely_unverifiable(sender_email):
 
 def get_public_base_url():
     """Canonical site URL for emails and absolute asset links. Set PUBLIC_BASE_URL in production."""
+    base = 'https://acds.africa'
     for key in ('PUBLIC_BASE_URL', 'SITE_URL'):
         v = (os.environ.get(key) or '').strip().rstrip('/')
         if v:
-            return v
-    if has_request_context():
-        host = request.host_url.rstrip('/')
-        if 'railway.app' in host or 'localhost' in host or '127.0.0.1' in host:
-            return 'https://acds.africa'
-        return host
-    return 'https://acds.africa'
+            base = v
+            break
+    if not base and has_request_context():
+        base = request.host_url.rstrip('/')
+        
+    if 'railway.app' in base or 'localhost' in base or '127.0.0.1' in base:
+        base = 'https://acds.africa'
+        
+    return base
 
 
 def absolute_public_static_url(stored_path):
@@ -1565,7 +1578,7 @@ HELP_ASSISTANT_NAV_LABELS = {
     'admin_settings': {'en': 'Site Settings', 'sw': 'Mipangilio ya tovuti'},
     'admin_portfolio': {'en': 'Portfolio', 'sw': 'Portfolio'},
     'admin_subscribers': {'en': 'Subscribers', 'sw': 'Waliojiunga'},
-    'admin_broadcast': {'en': 'Email subscribers', 'sw': 'Tuma barua'},
+    'admin_send_emails': {'en': 'Send Emails', 'sw': 'Tuma Barua'},
     'admin_comments': {'en': 'Comments', 'sw': 'Maoni'},
     'admin_logout': {'en': 'Logout', 'sw': 'Toka'},
 }
@@ -1892,41 +1905,37 @@ def admin_delete_subscriber(sub_id):
     return redirect(url_for('admin_subscribers'))
 
 
-@app.route('/admin/broadcast', methods=['GET', 'POST'])
+@app.route('/admin/send-emails', methods=['GET', 'POST'])
 @login_required
-def admin_broadcast():
+def admin_send_emails():
     count = Subscriber.query.filter_by(active=True).count()
     if request.method == 'POST':
         subject = (request.form.get('subject') or '').strip()
-        body = request.form.get('body_html') or ''
+        body_html = request.form.get('body') or ''
         if not subject:
             flash('Subject is required.', 'error')
-            return redirect(url_for('admin_broadcast'))
-        if not body.strip():
+            return redirect(url_for('admin_send_emails'))
+        if not _rich_body_has_visible_content(body_html):
             flash('Message body is required.', 'error')
-            return redirect(url_for('admin_broadcast'))
+            return redirect(url_for('admin_send_emails'))
         if not brevo_transactional_ready():
             flash('Set BREVO_API_KEY and BREVO_SENDER_EMAIL before sending subscriber email.', 'error')
-            return redirect(url_for('admin_broadcast'))
+            return redirect(url_for('admin_send_emails'))
+        
         try:
-            inner = bleach.clean(
-                body,
-                tags=BLEACH_TAGS,
-                attributes=BLEACH_ATTRS,
-                protocols=BLEACH_PROTOCOLS,
-                strip=True,
-            )
+            # Body comes from Quill as HTML, sanitize it
+            inner = _sanitize_rich_html(body_html)
         except Exception:
-            flash('Could not sanitize HTML body.', 'error')
-            return redirect(url_for('admin_broadcast'))
+            flash('Could not process email content.', 'error')
+            return redirect(url_for('admin_send_emails'))
+            
         schedule_subscriber_broadcast(subject, inner)
         flash(
-            f'Broadcast queued for {count} active subscriber(s). Sending runs in the background; '
-            'check server logs for per-recipient errors.',
+            f'Email queued for {count} active subscriber(s). Rendering and sending runs in the background.',
             'success',
         )
-        return redirect(url_for('admin_broadcast'))
-    return render_template('admin/broadcast.html', count=count)
+        return redirect(url_for('admin_send_emails'))
+    return render_template('admin/send_emails.html', count=count)
 
 
 @app.route('/admin/portfolio', methods=['GET', 'POST'])
