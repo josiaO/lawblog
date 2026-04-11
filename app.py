@@ -34,6 +34,9 @@ from flask_talisman import Talisman
 from admin_help_assistant import resolve_help_query, HELP_SUGGESTIONS
 from PIL import Image, UnidentifiedImageError
 
+# Snapshot before .env is merged: production must not rely on a server-side .env for SECRET_KEY.
+_SECRET_KEY_FROM_HOST_ENV = (os.environ.get('SECRET_KEY') or '').strip()
+
 load_dotenv()
 
 app = Flask(__name__, instance_path=os.path.join(os.path.dirname(__file__), 'instance'))
@@ -56,6 +59,13 @@ if _is_production_deployment():
         raise RuntimeError(
             'SECRET_KEY must be set to a long random value in production '
             '(detected FLASK_ENV=production, ENV=production, or RAILWAY_ENVIRONMENT=production).'
+        )
+    if not _SECRET_KEY_FROM_HOST_ENV:
+        raise RuntimeError(
+            'SECRET_KEY must be provided by the host environment in production '
+            '(platform env vars, systemd Environment=, Docker/Kubernetes secrets, etc.). '
+            'It must not be supplied only via a .env file on the server. '
+            'Set SECRET_KEY in your deployment dashboard or process manager before starting the app.'
         )
     if _secret_key == _DEV_SECRET_PLACEHOLDER:
         raise RuntimeError('SECRET_KEY must not use the development placeholder in production.')
