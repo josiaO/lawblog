@@ -108,8 +108,8 @@ if _is_production_deployment():
         app,
         content_security_policy={
             'default-src': ["'self'"],
-            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com", "https://www.gstatic.com", "https://cdnjs.cloudflare.com"],
-            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com", "https://www.gstatic.com", "https://cdnjs.cloudflare.com", "https://cdn.quilljs.com"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://cdn.quilljs.com"],
             'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
             'img-src': ["'self'", "data:", "https://res.cloudinary.com", "https://*"],
             'frame-src': ["'self'", "https://www.google.com"],
