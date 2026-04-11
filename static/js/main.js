@@ -72,14 +72,26 @@ document.addEventListener('DOMContentLoaded', function() {
   /* Newsletter modal */
   const modal = document.getElementById('newsletterModal');
   const closeBtn = document.getElementById('modalClose');
-  if (modal && closeBtn) {
-    closeBtn.addEventListener('click', () => modal.classList.remove('open'));
-    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+  if (modal) {
+    function closeNewsletterModal() {
+      modal.classList.remove('open');
+      resetNewsletterSubmitButton();
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeNewsletterModal);
+    }
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeNewsletterModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('open')) closeNewsletterModal();
+    });
     // Show modal after 30s for first visit
     if (!sessionStorage.getItem('newsletterShown')) {
-      setTimeout(() => {
+      setTimeout(function () {
         modal.classList.add('open');
         sessionStorage.setItem('newsletterShown', '1');
+        resetNewsletterSubmitButton();
       }, 30000);
     }
   }
@@ -89,7 +101,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!opener) return;
     e.preventDefault();
     const m = document.getElementById('newsletterModal');
-    if (m) m.classList.add('open');
+    if (m) {
+      m.classList.add('open');
+      resetNewsletterSubmitButton();
+    }
   });
 
   initNewsletterSubscribe();
@@ -109,6 +124,15 @@ function initNewsletterSubscribe() {
     e.preventDefault();
     submitNewsletterForm(form);
   });
+}
+
+/** Re-enable the subscribe control (e.g. after closing the modal mid-request, or each time it opens). */
+function resetNewsletterSubmitButton() {
+  var btn = document.querySelector('#newsletterSubscribeForm #subBtn');
+  if (!btn) return;
+  btn.disabled = false;
+  var lab = (btn.dataset.label || '').trim();
+  if (lab) btn.textContent = lab;
 }
 
 function nlSleep(ms) {
@@ -194,8 +218,8 @@ async function submitNewsletterForm(form) {
   var email = (emailInput.value || '').trim();
   var name = nameInput ? (nameInput.value || '').trim() : '';
   var csrf = (csrfInput.value || '').trim();
-  var labelBusy = btn.dataset.busy || '…';
-  var labelDefault = btn.dataset.label || btn.textContent.trim() || 'Subscribe';
+  var labelBusy = (btn.dataset.busy || '…').trim();
+  var labelDefault = (btn.dataset.label || btn.textContent || 'Subscribe').trim() || 'Subscribe';
   var siteKey = (document.body.dataset.recaptchaKey || '').trim();
 
   if (!email) {
@@ -206,40 +230,36 @@ async function submitNewsletterForm(form) {
   btn.disabled = true;
   btn.textContent = labelBusy;
 
-  var token = '';
-  if (siteKey) {
-    var loaded = await nlWaitForGrecaptcha(40000);
-    if (!loaded) {
-      showResult(
-        result,
-        'Security script did not load in time. Check your connection, or allow google.com / gstatic.com (Firefox: disable Strict tracking for this site if needed).',
-        false
-      );
-      btn.disabled = false;
-      btn.textContent = labelDefault;
-      return;
-    }
-    token = await nlRecaptchaToken(siteKey, 4);
-    if (!token) {
-      showResult(
-        result,
-        'Could not complete the security check. Refresh the page, try again, or allow Google scripts for this site.',
-        false
-      );
-      btn.disabled = false;
-      btn.textContent = labelDefault;
-      return;
-    }
-  }
-  if (tokInput) tokInput.value = token;
-
-  var body = new URLSearchParams();
-  body.set('csrf_token', csrf);
-  body.set('email', email);
-  body.set('name', name);
-  body.set('recaptcha_token', token);
-
   try {
+    var token = '';
+    if (siteKey) {
+      var loaded = await nlWaitForGrecaptcha(40000);
+      if (!loaded) {
+        showResult(
+          result,
+          'Security script did not load in time. Check your connection, or allow google.com / gstatic.com (Firefox: disable Strict tracking for this site if needed).',
+          false
+        );
+        return;
+      }
+      token = await nlRecaptchaToken(siteKey, 4);
+      if (!token) {
+        showResult(
+          result,
+          'Could not complete the security check. Refresh the page, try again, or allow Google scripts for this site.',
+          false
+        );
+        return;
+      }
+    }
+    if (tokInput) tokInput.value = token;
+
+    var body = new URLSearchParams();
+    body.set('csrf_token', csrf);
+    body.set('email', email);
+    body.set('name', name);
+    body.set('recaptcha_token', token);
+
     var res = await nlFetchSubscribe(form.action, body.toString(), csrf, 40000);
     var data = {};
     try {
@@ -252,8 +272,6 @@ async function submitNewsletterForm(form) {
           : 'Something went wrong. Please try again.',
         false
       );
-      btn.disabled = false;
-      btn.textContent = labelDefault;
       return;
     }
     var ok = !!data.ok;
@@ -270,9 +288,10 @@ async function submitNewsletterForm(form) {
       aborted ? 'Request timed out. Check your connection and try again.' : 'Something went wrong. Please try again.',
       false
     );
+  } finally {
+    btn.disabled = false;
+    btn.textContent = labelDefault;
   }
-  btn.disabled = false;
-  btn.textContent = labelDefault;
 }
 
 function showResult(el, msg, ok) {
