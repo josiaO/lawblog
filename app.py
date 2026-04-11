@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from flask import (Flask, render_template, redirect, url_for, request,
                    flash, jsonify, abort, session, send_from_directory,
                    has_request_context, current_app, Response, stream_with_context)
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
 from flask_login import (LoginManager, UserMixin, login_user, logout_user,
@@ -102,6 +103,10 @@ login_manager.login_view = 'admin_login'
 cache = Cache(config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
 cache.init_app(app)
 
+# ProxyFix is essential for Flask apps behind a reverse proxy (like Railway's load balancer)
+# to correctly detect HTTPS and set security headers.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+
 talisman = Talisman()
 if _is_production_deployment():
     talisman.init_app(
@@ -115,6 +120,7 @@ if _is_production_deployment():
             'frame-src': ["'self'", "https://www.google.com"],
             'connect-src': ["'self'", "https://*"],
         },
+        content_security_policy_nonce=True,
         force_https=True,
         strict_transport_security=True,
         session_cookie_secure=True
