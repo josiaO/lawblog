@@ -1,0 +1,26 @@
+{% extends "public/base.html" %}
+
+{% block title %}Internal Server Error — {{ settings.name }}{% endblock %}
+
+{% block content %}
+<section class="hero" style="min-height: 80vh; text-align: center; justify-content: center; display: flex; flex-direction: column; align-items: center;">
+  <div class="hero-bg"></div>
+  <div class="hero-inner" style="grid-template-columns: 1fr; max-width: 600px;">
+    <div class="section-eyebrow animate-fade-up">Error 500</div>
+    <h1 class="hero-title animate-fade-up delay-1" style="font-size: clamp(4rem, 8vw, 8rem); color: var(--accent);">500</h1>
+    <h2 class="animate-fade-up delay-2" style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 1.5rem;">
+      {% if lang == 'en' %}Internal Server Error{% else %}Hitilafu ya Seva{% endif %}
+    </h2>
+    <p class="hero-desc animate-fade-up delay-3" style="margin: 0 auto 2.5rem;">
+      {% if lang == 'en' %}
+        Something went wrong on our end. We are actively looking into it. Please try again later.
+      {% else %}
+        Kuna hitilafu imetokea. Tunashughulikia tatizo hili. Tafadhali jaribu tena baadaye.
+      {% endif %}
+    </p>
+    <a href="{{ url_for('index') }}" class="btn-primary" style="margin: 0 auto; display: inline-flex;">
+      {% if lang == 'en' %}Return Home{% else %}Rudi Nyumbani{% endif %} →
+    </a>
+  </div>
+</section>
+{% endblock %}

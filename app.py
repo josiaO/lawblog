@@ -24,6 +24,8 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.routing import BuildError
+from flask_caching import Cache
+from flask_talisman import Talisman
 
 from admin_help_assistant import resolve_help_query, HELP_SUGGESTIONS
 from PIL import Image, UnidentifiedImageError
@@ -96,6 +98,46 @@ db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'admin_login'
+
+cache = Cache(config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
+cache.init_app(app)
+
+talisman = Talisman()
+if _is_production_deployment():
+    talisman.init_app(
+        app,
+        content_security_policy={
+            'default-src': ["'self'"],
+            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com", "https://www.gstatic.com", "https://cdnjs.cloudflare.com"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+            'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
+            'img-src': ["'self'", "data:", "https://res.cloudinary.com", "https://*"],
+            'frame-src': ["'self'", "https://www.google.com"],
+            'connect-src': ["'self'", "https://*"],
+        },
+        force_https=True,
+        strict_transport_security=True,
+        session_cookie_secure=True
+    )
+else:
+    talisman.init_app(app, force_https=False, content_security_policy=None)
+
+# Performance: add cache-control headers to static files
+@app.after_request
+def add_header(response):
+    # If the response is for a static file, cache it for 1 year
+    if request.path.startswith('/static/') and response.status_code == 200:
+        response.headers['Cache-Control'] = 'public, max-age=31536000'
+    return response
+
+# Custom error handlers
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('public/404.html', lang=session.get('lang', 'en'), settings=get_settings()), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('public/500.html', lang=session.get('lang', 'en'), settings=get_settings()), 500
 
 
 @app.errorhandler(CSRFError)

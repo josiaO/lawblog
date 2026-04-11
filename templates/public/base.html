@@ -7,6 +7,20 @@
   <title>{% block title %}{{ settings.name }}{% endblock %}</title>
   <meta name="description" content="{% block desc %}{{ settings.bio_en if lang=='en' else settings.bio_fr }}{% endblock %}" />
 
+  <!-- SEO & OpenGraph -->
+  <link rel="canonical" href="{{ request.url }}" />
+  <meta property="og:site_name" content="{{ settings.name }}" />
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
+  <meta property="og:title" content="{% block og_title %}{{ settings.name }}{% endblock %}" />
+  <meta property="og:description" content="{% block og_desc %}{{ settings.bio_en if lang=='en' else settings.bio_fr }}{% endblock %}" />
+  <meta property="og:url" content="{{ request.url }}" />
+  {% block og_image %}
+    {% if settings.banner_image %}
+      <meta property="og:image" content="{{ settings.banner_image|asset }}" />
+    {% endif %}
+  {% endblock %}
+  <meta name="twitter:card" content="summary_large_image" />
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

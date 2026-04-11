@@ -2,6 +2,21 @@
 
 {% block title %}{{ settings.name }} — {{ settings.tagline_en if lang=='en' else settings.tagline_fr }}{% endblock %}
 
+{% block head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "{{ settings.name | replace('\"', '\\\"') }}",
+  "url": "{{ url_for('index', _external=True) }}",
+  "author": {
+      "@type": "Person",
+      "name": "{{ settings.name | replace('\"', '\\\"') }}"
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <!-- ── Hero ── -->

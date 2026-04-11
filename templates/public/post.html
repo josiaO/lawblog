@@ -2,6 +2,37 @@
 {% block title %}{{ post.title_en if lang=='en' else (post.title_fr or post.title_en) }} — {{ settings.name }}{% endblock %}
 {% block desc %}{{ post.excerpt_en if lang=='en' else (post.excerpt_fr or post.excerpt_en) }}{% endblock %}
 
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ post.title_en if lang=='en' else (post.title_fr or post.title_en) }}{% endblock %}
+{% block og_desc %}{{ post.excerpt_en if lang=='en' else (post.excerpt_fr or post.excerpt_en) }}{% endblock %}
+{% block og_image %}
+  {% if post.cover_image %}
+    <meta property="og:image" content="{{ post.cover_image|asset }}" />
+  {% elif settings.banner_image %}
+    <meta property="og:image" content="{{ settings.banner_image|asset }}" />
+  {% endif %}
+{% endblock %}
+
+{% block head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "{{ (post.title_en if lang=='en' else (post.title_fr or post.title_en)) | replace('\"', '\\\"') }}",
+  "image": [
+    "{% if post.cover_image %}{{ post.cover_image|asset }}{% endif %}"
+   ],
+  "datePublished": "{{ post.created_at.isoformat() }}",
+  "dateModified": "{{ post.updated_at.isoformat() }}",
+  "author": [{
+      "@type": "Person",
+      "name": "{{ settings.name | replace('\"', '\\\"') }}",
+      "url": "{{ url_for('about', _external=True) }}"
+    }]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <!-- Reading progress -->
