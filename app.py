@@ -1252,6 +1252,8 @@ def schedule_new_post_notifications(post_id):
 
 
 def get_lang():
+    if not has_request_context():
+        return 'en'
     l = session.get('lang', 'en')
     if l == 'fr':
         session['lang'] = 'sw'
@@ -1282,7 +1284,8 @@ def get_settings():
 
 @app.context_processor
 def inject_globals():
-    lang = get_lang()
+    # Email rendering and other jobs run in threads with app_context only — no session.
+    lang = get_lang() if has_request_context() else 'en'
     return dict(lang=lang, settings=get_settings(), now=datetime.utcnow())
 
 
