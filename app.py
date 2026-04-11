@@ -906,11 +906,11 @@ def _brevo_sender_domain_likely_unverifiable(sender_email):
     if not sender_email or '@' not in sender_email:
         return True
     domain = sender_email.split('@', 1)[1].lower().strip()
-    if domain.endswith('.railway.app') or domain.endswith('.up.railway.app'):
+    if domain.endswith('.railway.app') or domain.endswith('.up.railway.app') or domain.endswith('.acds.africa') or domain.endswith(".africa"):
         return True
     if 'herokuapp.com' in domain:
         return True
-    if domain in ('localhost', 'example.com', 'test', 'invalid'):
+    if domain in ('localhost', 'acds.africa', 'test', 'invalid'):
         return True
     return False
 
