@@ -103,6 +103,9 @@ csrf = CSRFProtect(app)
 # Fetch/JSON posts do not populate request.form; strict Referrer checks also fail on some
 # mobile / privacy settings when only X-CSRFToken is sent. The signed token is sufficient.
 app.config['WTF_CSRF_SSL_STRICT'] = False
+# Long-lived tabs (e.g. Firefox with the site open overnight) otherwise get CSRF mismatches
+# after WTF_CSRF_TIME_LIMIT (default 1h) while the meta tag still shows an old token.
+app.config['WTF_CSRF_TIME_LIMIT'] = None
 login_manager = LoginManager(app)
 login_manager.login_view = 'admin_login'
 
@@ -155,16 +158,41 @@ def internal_server_error(e):
     return render_template('public/500.html', lang=session.get('lang', 'en'), settings=get_settings()), 500
 
 
+def _wants_json_response():
+    """True for fetch/XHR from our JS (Firefox-safe detection, not only Accept:)."""
+    return (
+        'application/json' in (request.headers.get('Accept') or '')
+        or (request.headers.get('X-Requested-With') or '').strip() == 'XMLHttpRequest'
+    )
+
+
+def _safe_referer_redirect(fallback_endpoint='index', code=303):
+    """Redirect to Referer only when same host (avoid open redirects)."""
+    ref = (request.headers.get('Referer') or '').strip()
+    if not ref:
+        return redirect(url_for(fallback_endpoint), code=code)
+    try:
+        r = urlparse(ref)
+    except (TypeError, ValueError):
+        return redirect(url_for(fallback_endpoint), code=code)
+    ref_host = (r.hostname or '').lower()
+    cur_host = (request.host or '').split(':')[0].lower()
+    if ref_host and ref_host == cur_host:
+        return redirect(ref, code=code)
+    if (r.netloc or '').lower() == (request.host or '').lower():
+        return redirect(ref, code=code)
+    return redirect(url_for(fallback_endpoint), code=code)
+
+
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
-    accept = (request.headers.get('Accept') or '')
-    if 'application/json' in accept:
+    if _wants_json_response():
         return jsonify({
             'ok': False,
             'msg': 'Security check failed. Refresh the page and try again.',
         }), 400
     flash('Your session expired or the form was resent. Please try again.', 'error')
-    return redirect(request.referrer or url_for('index')), 400
+    return _safe_referer_redirect('index', code=302)
 
 
 # ─── Rich text (Quill) / Markdown ─────────────────────────────────────────────
@@ -1620,18 +1648,38 @@ def _subscribe_request_data():
     return out
 
 
-@app.route('/subscribe', methods=['POST'])
+@app.route('/subscribe', methods=['GET', 'POST'])
 def subscribe():
+    """
+    Newsletter signup: real HTML form (progressive enhancement) + JSON for in-modal XHR.
+    CSRF token lives in the form hidden field (always in sync); JS also sends X-Requested-With.
+    """
+    if request.method == 'GET':
+        return redirect(url_for('index'))
+
+    wants_json = _wants_json_response()
+    lang = get_lang()
     data = _subscribe_request_data()
     email = (data.get('email') or '').strip().lower()
     name = (data.get('name') or '').strip()
     token = data.get('recaptcha_token', '')
 
+    def respond(ok, msg_en, msg_sw=None):
+        msg = msg_en if lang != 'sw' else (msg_sw or msg_en)
+        if wants_json:
+            return jsonify({'ok': ok, 'msg': msg})
+        flash(msg, 'success' if ok else 'error')
+        return _safe_referer_redirect('index', code=303)
+
     if not email or '@' not in email:
-        return jsonify({'ok': False, 'msg': 'Invalid email address.'})
+        return respond(False, 'Invalid email address.', 'Barua pepe si sahihi.')
 
     if not verify_recaptcha(token):
-        return jsonify({'ok': False, 'msg': 'reCAPTCHA failed. Please try again.'})
+        return respond(
+            False,
+            'reCAPTCHA could not verify this browser. Try refreshing, another browser, or allow Google scripts.',
+            'reCAPTCHA haikudhibitisha. Jaribu kufungua upya au kivinjari kingine.',
+        )
 
     existing = Subscriber.query.filter(func.lower(Subscriber.email) == email).first()
     if existing:
@@ -1640,15 +1688,23 @@ def subscribe():
             db.session.commit()
             add_to_brevo(email, name)
             send_newsletter_welcome_email(email, name, returning=True)
-            return jsonify({'ok': True, 'msg': 'Welcome back! You\'re resubscribed.'})
-        return jsonify({'ok': False, 'msg': 'You\'re already subscribed!'})
+            return respond(
+                True,
+                'Welcome back! You are resubscribed.',
+                'Karibu tena! Umejiandikisha upya.',
+            )
+        return respond(False, 'You are already subscribed!', 'Tayari umejiandikisha!')
 
     sub = Subscriber(email=email, name=name)
     db.session.add(sub)
     db.session.commit()
     add_to_brevo(email, name)
     send_newsletter_welcome_email(email, name, returning=False)
-    return jsonify({'ok': True, 'msg': 'You\'re in! Thank you for subscribing.'})
+    return respond(
+        True,
+        'You are in! Thank you for subscribing.',
+        'Hongera! Asante kwa kujiunga.',
+    )
 
 
 @app.route('/unsubscribe')

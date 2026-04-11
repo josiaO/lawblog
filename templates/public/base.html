@@ -129,15 +129,17 @@
       <p class="modal-desc">
         {{ 'Join the newsletter — essays on law, justice & youth culture. No spam, ever.' if lang=='en' else 'Jiunge na jarida — makala kuhusu sheria, haki na vijana. Hakuna taka.' }}
       </p>
-      <div class="newsletter-form" id="newsletterForm">
-        <input type="text" id="subName" placeholder="{{ 'Your name (optional)' if lang=='en' else 'Jina (si lazima)' }}" class="sub-input" />
-        <input type="email" id="subEmail" placeholder="{{ 'your@email.com' }}" class="sub-input" required />
-        <button type="button" class="sub-btn" id="subBtn"
+      <form class="newsletter-form" id="newsletterSubscribeForm" method="post" action="{{ url_for('subscribe') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off" />
+        <input type="hidden" name="recaptcha_token" id="subRecaptchaToken" value="" autocomplete="off" />
+        <input type="text" name="name" id="subName" placeholder="{{ 'Your name (optional)' if lang=='en' else 'Jina (si lazima)' }}" class="sub-input" maxlength="200" autocomplete="name" />
+        <input type="email" name="email" id="subEmail" placeholder="{{ 'your@email.com' }}" class="sub-input" required maxlength="254" autocomplete="email" inputmode="email" />
+        <button type="submit" class="sub-btn" id="subBtn"
           data-label="{{ 'Subscribe' if lang=='en' else 'Jiunge' }}"
           data-busy="{{ '…' if lang=='en' else '…' }}">
           {{ 'Subscribe' if lang=='en' else 'Jiunge' }}
         </button>
-      </div>
+      </form>
       <div class="sub-result" id="subResult" style="display:none;"></div>
       <p class="modal-fine">
         {{ 'Powered by Brevo.' if lang=='en' else 'Inaendeshwa na Brevo.' }}
