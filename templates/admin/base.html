@@ -15,9 +15,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>{% block title %}Admin{% endblock %} — Counsel & Craft</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono&display=swap" rel="stylesheet" nonce="{{ csp_nonce() }}" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" nonce="{{ csp_nonce() }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" nonce="{{ csp_nonce() }}" />
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -156,9 +156,9 @@
 {% block auth_content %}{% endblock %}
 {% endif %}
 
-<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}" nonce="{{ csp_nonce() }}"></script>
 {% if current_user.is_authenticated %}
-<script src="{{ url_for('static', filename='js/admin_help_chat.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin_help_chat.js') }}" nonce="{{ csp_nonce() }}"></script>
 {% endif %}
 {% block scripts %}{% endblock %}
 </body>
