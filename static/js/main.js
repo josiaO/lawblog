@@ -114,7 +114,7 @@ function waitForGrecaptcha(timeoutMs) {
   var deadline = Date.now() + timeoutMs;
   return new Promise(function (resolve) {
     (function poll() {
-      if (typeof grecaptcha !== 'undefined') {
+      if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.ready === 'function') {
         resolve(true);
         return;
       }
@@ -122,8 +122,43 @@ function waitForGrecaptcha(timeoutMs) {
         resolve(false);
         return;
       }
-      setTimeout(poll, 80);
+      setTimeout(poll, 100);
     })();
+  });
+}
+
+function sleepMs(ms) {
+  return new Promise(function (r) { setTimeout(r, ms); });
+}
+
+/** Run reCAPTCHA v3 execute with retries (mobile / strict browsers often need a second attempt). */
+async function getSubscribeRecaptchaToken(siteKey, maxAttempts) {
+  var attempts = maxAttempts || 3;
+  for (var i = 0; i < attempts; i++) {
+    try {
+      var t = await new Promise(function (resolve, reject) {
+        grecaptcha.ready(function () {
+          grecaptcha.execute(siteKey, { action: 'subscribe' }).then(resolve).catch(reject);
+        });
+      });
+      if (t && String(t).trim()) return String(t).trim();
+    } catch (e) {
+      /* empty token or execute rejected — retry after a short delay */
+    }
+    if (i < attempts - 1) await sleepMs(350 + i * 400);
+  }
+  return '';
+}
+
+function fetchWithTimeout(url, options, timeoutMs) {
+  var ms = timeoutMs || 35000;
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+    return fetch(url, Object.assign({}, options, { signal: AbortSignal.timeout(ms) }));
+  }
+  var ctrl = new AbortController();
+  var id = setTimeout(function () { ctrl.abort(); }, ms);
+  return fetch(url, Object.assign({}, options, { signal: ctrl.signal })).finally(function () {
+    clearTimeout(id);
   });
 }
 
@@ -151,12 +186,12 @@ async function submitSubscribe() {
   var token = '';
   var siteKey = (document.body.dataset.recaptchaKey || '').trim();
   if (siteKey) {
-    var loaded = await waitForGrecaptcha(15000);
+    var loaded = await waitForGrecaptcha(35000);
     if (!loaded) {
       if (result) {
         showResult(
           result,
-          'Security check timed out. Check your connection, disable blockers for this site, and try again.',
+          'Security check timed out. Try again on Wi‑Fi, or allow scripts from Google for this site (privacy / ad blockers).',
           false
         );
       }
@@ -164,14 +199,16 @@ async function submitSubscribe() {
       btn.textContent = labelDefault;
       return;
     }
-    try {
-      token = await new Promise(function (resolve, reject) {
-        grecaptcha.ready(function () {
-          grecaptcha.execute(siteKey, { action: 'subscribe' }).then(resolve).catch(reject);
-        });
-      });
-    } catch (e) {
-      token = '';
+    token = await getSubscribeRecaptchaToken(siteKey, 3);
+    if (!token && result) {
+      showResult(
+        result,
+        'Could not run the security check. Try again, use another browser, or briefly turn off strict tracking / ad blocking for this site.',
+        false
+      );
+      btn.disabled = false;
+      btn.textContent = labelDefault;
+      return;
     }
   }
 
@@ -184,7 +221,7 @@ async function submitSubscribe() {
   body.set('recaptcha_token', token);
 
   try {
-    var res = await fetch('/subscribe', {
+    var res = await fetchWithTimeout('/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
@@ -193,12 +230,20 @@ async function submitSubscribe() {
       },
       credentials: 'same-origin',
       body: body.toString(),
-    });
+    }, 35000);
     var data = {};
     try {
       data = await res.json();
     } catch (parseErr) {
-      if (result) showResult(result, 'Something went wrong. Please try again.', false);
+      if (result) {
+        showResult(
+          result,
+          res.status >= 500
+            ? 'The server had a problem. Wait a moment and try again.'
+            : 'Something went wrong. Please try again.',
+          false
+        );
+      }
       btn.disabled = false;
       btn.textContent = labelDefault;
       return;
@@ -212,7 +257,14 @@ async function submitSubscribe() {
       if (nameInput) nameInput.value = '';
     }
   } catch (e) {
-    if (result) showResult(result, 'Something went wrong. Please try again.', false);
+    if (result) {
+      var aborted = e && (e.name === 'AbortError' || e.name === 'TimeoutError');
+      showResult(
+        result,
+        aborted ? 'Request timed out. Check your connection and try again.' : 'Something went wrong. Please try again.',
+        false
+      );
+    }
   }
   btn.disabled = false;
   btn.textContent = labelDefault;

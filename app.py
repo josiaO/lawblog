@@ -907,10 +907,30 @@ def verify_recaptcha(token):
         return True
     if not (token or '').strip():
         return False
-    resp = requests.post('https://www.google.com/recaptcha/api/siteverify',
-                         data={'secret': secret, 'response': token}, timeout=5)
-    data = resp.json()
-    return data.get('success') and data.get('score', 0) >= 0.5
+    try:
+        resp = requests.post(
+            'https://www.google.com/recaptcha/api/siteverify',
+            data={'secret': secret, 'response': (token or '').strip()},
+            timeout=8,
+        )
+        data = resp.json()
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        app.logger.warning('reCAPTCHA siteverify failed: %s', exc)
+        return False
+    if not isinstance(data, dict) or not data.get('success'):
+        return False
+    try:
+        min_score = float(os.environ.get('RECAPTCHA_MIN_SCORE', '0.3'))
+    except ValueError:
+        min_score = 0.3
+    min_score = max(0.0, min(min_score, 1.0))
+    # v3 returns a score; stricter browsers / privacy settings often score below 0.5 for humans.
+    score = data.get('score')
+    try:
+        score_f = float(score) if score is not None else 0.0
+    except (TypeError, ValueError):
+        score_f = 0.0
+    return score_f >= min_score
 
 
 def _newsletter_unsubscribe_serializer():
