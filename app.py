@@ -10,7 +10,9 @@ from openai import OpenAI
 import markdown2
 import bleach
 from datetime import datetime
-from urllib.parse import quote, urlparse, urlparse
+from urllib.parse import quote, urlparse
+
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from slugify import slugify
 from dotenv import load_dotenv
 from flask import (Flask, render_template, redirect, url_for, request,
@@ -18,6 +20,7 @@ from flask import (Flask, render_template, redirect, url_for, request,
                    has_request_context, current_app, Response, stream_with_context)
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from flask_login import (LoginManager, UserMixin, login_user, logout_user,
                          login_required, current_user)
@@ -645,13 +648,14 @@ def attachment_kind(path):
     return 'file'
 
 
-def _render_announcement_email(subject, inner_html):
+def _render_announcement_email(subject, inner_html, recipient_email=None):
     settings = get_settings()
     site_name = settings.get('name') or 'Our site'
     base = get_public_base_url()
     site_url = base or ''
     contact = (settings.get('email') or '').strip()
     unsub = f'mailto:{contact}?subject={quote("Unsubscribe from newsletter")}' if contact else ''
+    unsub_url = newsletter_unsubscribe_url_for_email(recipient_email) if recipient_email else ''
     return render_template(
         'email/announcement.html',
         subject_line=subject,
@@ -661,6 +665,7 @@ def _render_announcement_email(subject, inner_html):
         site_url=site_url,
         visit_label='Visit the site',
         unsubscribe_mailto=unsub,
+        unsubscribe_url=unsub_url,
         unsubscribe_label='Unsubscribe',
     )
 
@@ -681,13 +686,13 @@ def schedule_subscriber_broadcast(subject, inner_html_sanitized):
                 return
             
             app.logger.info('Preparing email for %d subscribers...', len(subs))
-            html = _render_announcement_email(subject, inner_html_sanitized)
             plain = _html_to_text_fallback(inner_html_sanitized)
             subj = subject[:998]
             
             ok, fail = 0, 0
             for sub in subs:
                 try:
+                    html = _render_announcement_email(subject, inner_html_sanitized, sub.email)
                     if brevo_send_transactional(sub.email, sub.name or '', subj, html, text_content=plain):
                         ok += 1
                     else:
@@ -882,10 +887,80 @@ def verify_recaptcha(token):
     secret = os.environ.get('RECAPTCHA_SECRET_KEY', '')
     if not secret or secret == 'your-recaptcha-secret-key':
         return True  # skip in dev
+    if not (token or '').strip():
+        return False
     resp = requests.post('https://www.google.com/recaptcha/api/siteverify',
                          data={'secret': secret, 'response': token}, timeout=5)
     data = resp.json()
     return data.get('success') and data.get('score', 0) >= 0.5
+
+
+def _newsletter_unsubscribe_serializer():
+    return URLSafeTimedSerializer(app.secret_key, salt='lawblog-newsletter-unsub-v1')
+
+
+def make_newsletter_unsubscribe_token(email: str) -> str:
+    e = (email or '').strip().lower()
+    if not e or '@' not in e:
+        return ''
+    return _newsletter_unsubscribe_serializer().dumps({'e': e})
+
+
+def parse_newsletter_unsubscribe_token(token: str, max_age_seconds: int = 86400 * 365 * 15):
+    """Return subscriber email from signed token, or None if invalid/expired."""
+    if not token or not str(token).strip():
+        return None
+    try:
+        data = _newsletter_unsubscribe_serializer().loads(
+            str(token).strip(), max_age=max_age_seconds
+        )
+        e = (data.get('e') or '').strip().lower()
+        return e if e and '@' in e else None
+    except (BadSignature, SignatureExpired, TypeError, ValueError):
+        return None
+
+
+def newsletter_unsubscribe_url_for_email(email: str) -> str:
+    """HTTPS one-click unsubscribe link for transactional email footers."""
+    tok = make_newsletter_unsubscribe_token(email)
+    if not tok:
+        return ''
+    base = (get_public_base_url() or '').strip().rstrip('/')
+    if not base:
+        return ''
+    return f'{base}/unsubscribe?token={quote(tok, safe="")}'
+
+
+def brevo_delete_contact(email: str):
+    """Remove contact from Brevo when they unsubscribe (best-effort)."""
+    api_key = (os.environ.get('BREVO_API_KEY') or '').strip()
+    if not api_key or api_key == 'your-brevo-api-key':
+        return
+    e = (email or '').strip().lower()
+    if not e:
+        return
+    try:
+        url = f'https://api.brevo.com/v3/contacts/{quote(e, safe="")}'
+        resp = requests.delete(url, headers={'api-key': api_key}, timeout=10)
+        if resp.status_code not in (200, 201, 204, 404):
+            app.logger.warning('Brevo contact delete returned %s for %s', resp.status_code, e)
+    except requests.RequestException:
+        app.logger.exception('Brevo contact delete failed for %s', e)
+
+
+def deactivate_subscriber_by_email(email: str) -> bool:
+    """Mark subscriber inactive if found (case-insensitive); sync Brevo."""
+    e = (email or '').strip().lower()
+    if not e:
+        return False
+    sub = Subscriber.query.filter(func.lower(Subscriber.email) == e).first()
+    if not sub:
+        return False
+    if sub.active:
+        sub.active = False
+        db.session.commit()
+    brevo_delete_contact(e)
+    return True
 
 
 def add_to_brevo(email, name=''):
@@ -1087,6 +1162,7 @@ def send_newsletter_welcome_email(to_email, name='', returning=False):
     unsub_mailto = ''
     if contact:
         unsub_mailto = f'mailto:{contact}?subject={quote("Unsubscribe from newsletter")}'
+    unsub_url = newsletter_unsubscribe_url_for_email(to_email)
     try:
         html = render_template(
             'email/welcome_subscribe.html',
@@ -1100,6 +1176,7 @@ def send_newsletter_welcome_email(to_email, name='', returning=False):
             footer_note='You received this because you subscribed to our newsletter.',
             contact_email=contact,
             unsubscribe_mailto=unsub_mailto,
+            unsubscribe_url=unsub_url,
             unsubscribe_label='Unsubscribe',
             view_site_label='View in browser',
         )
@@ -1115,7 +1192,7 @@ def send_newsletter_welcome_email(to_email, name='', returning=False):
         )
 
 
-def _render_new_post_email(post):
+def _render_new_post_email(post, recipient_email=None):
     settings = get_settings()
     site_name = settings.get('name') or 'Our blog'
     author = (settings.get('name') or 'The author').strip()
@@ -1126,6 +1203,7 @@ def _render_new_post_email(post):
     meta_line = f'By {author} • {post.reading_time("en")} min read'
     contact = (settings.get('email') or '').strip()
     unsub_mailto = f'mailto:{contact}?subject={quote("Unsubscribe from newsletter")}' if contact else ''
+    unsub_url = newsletter_unsubscribe_url_for_email(recipient_email) if recipient_email else ''
     return render_template(
         'email/new_post_notify.html',
         subject_line=f'New on {site_name}: {post.title_en}',
@@ -1141,6 +1219,7 @@ def _render_new_post_email(post):
         view_article_label='View in browser',
         contact_email=contact,
         unsubscribe_mailto=unsub_mailto,
+        unsubscribe_url=unsub_url,
         unsubscribe_label='Unsubscribe',
     )
 
@@ -1154,22 +1233,19 @@ def schedule_new_post_notifications(post_id):
         app.logger.info('New post emails skipped: set BREVO_API_KEY and BREVO_SENDER_EMAIL.')
         return
 
+    app_obj = current_app._get_current_object()
+
     def worker():
-        with app.app_context():
-            if not get_public_base_url():
-                app.logger.warning(
-                    'New post emails skipped: set PUBLIC_BASE_URL (or SITE_URL) so links work in email.'
-                )
-                return
+        with app_obj.app_context():
             post = Post.query.get(post_id)
             if not post or not post.published:
                 return
             subs = Subscriber.query.filter_by(active=True).all()
             if not subs:
                 return
-            html = _render_new_post_email(post)
             subject = f'New on {get_settings().get("name") or "Blog"}: {post.title_en}'[:998]
             for sub in subs:
+                html = _render_new_post_email(post, sub.email)
                 brevo_send_transactional(sub.email, sub.name or '', subject, html)
 
     threading.Thread(target=worker, daemon=True).start()
@@ -1494,8 +1570,8 @@ def public_cv_pdf():
 
 @app.route('/subscribe', methods=['POST'])
 def subscribe():
-    data = request.get_json()
-    email = (data.get('email') or '').strip()
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
     name = (data.get('name') or '').strip()
     token = data.get('recaptcha_token', '')
 
@@ -1505,7 +1581,7 @@ def subscribe():
     if not verify_recaptcha(token):
         return jsonify({'ok': False, 'msg': 'reCAPTCHA failed. Please try again.'})
 
-    existing = Subscriber.query.filter_by(email=email).first()
+    existing = Subscriber.query.filter(func.lower(Subscriber.email) == email).first()
     if existing:
         if not existing.active:
             existing.active = True
@@ -1521,6 +1597,59 @@ def subscribe():
     add_to_brevo(email, name)
     send_newsletter_welcome_email(email, name, returning=False)
     return jsonify({'ok': True, 'msg': 'You\'re in! Thank you for subscribing.'})
+
+
+@app.route('/unsubscribe')
+def unsubscribe_from_token():
+    """One-click unsubscribe from signed link in newsletter emails."""
+    token = (request.args.get('token') or '').strip()
+    lang = get_lang()
+    settings = get_settings()
+    if not token:
+        return redirect(url_for('newsletter_unsubscribe'))
+    email = parse_newsletter_unsubscribe_token(token)
+    if not email:
+        return render_template(
+            'public/unsubscribe_result.html',
+            lang=lang,
+            settings=settings,
+            ok=False,
+        ), 400
+    deactivate_subscriber_by_email(email)
+    return render_template(
+        'public/unsubscribe_result.html',
+        lang=lang,
+        settings=settings,
+        ok=True,
+    )
+
+
+@app.route('/newsletter/unsubscribe', methods=['GET', 'POST'])
+def newsletter_unsubscribe():
+    """Public form: unsubscribe by email (reCAPTCHA when configured)."""
+    lang = get_lang()
+    settings = get_settings()
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        recaptcha_tok = (request.form.get('recaptcha_token') or '').strip()
+        if not email or '@' not in email:
+            flash('Please enter a valid email address.', 'error')
+            return redirect(url_for('newsletter_unsubscribe'))
+        if not verify_recaptcha(recaptcha_tok):
+            flash('Security check failed. Refresh the page and try again.', 'error')
+            return redirect(url_for('newsletter_unsubscribe'))
+        sub = Subscriber.query.filter(func.lower(Subscriber.email) == email).first()
+        if sub:
+            deactivate_subscriber_by_email(email)
+            flash('You have been unsubscribed from the newsletter.', 'success')
+        else:
+            flash(
+                'That address is not on our active subscriber list. '
+                'If you still receive mail, try the link in the footer of the email.',
+                'info',
+            )
+        return redirect(url_for('newsletter_unsubscribe'))
+    return render_template('public/newsletter_unsubscribe.html', lang=lang, settings=settings)
 
 
 @app.route('/blog/<slug>/comment', methods=['POST'])

@@ -239,6 +239,11 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 }
 .flash-success { background: rgba(76,175,80,0.12); border: 1px solid rgba(76,175,80,0.3); color: #81c784; }
 .flash-error { background: rgba(244,67,54,0.12); border: 1px solid rgba(244,67,54,0.3); color: #e57373; }
+.flash-info {
+  background: rgba(100, 149, 237, 0.1);
+  border: 1px solid rgba(100, 149, 237, 0.35);
+  color: var(--text-2);
+}
 
 /* ── Hero ── */
 .hero {
@@ -1017,6 +1022,8 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 .sub-result.ok { background: rgba(76,175,80,0.12); color: #81c784; }
 .sub-result.err { background: rgba(244,67,54,0.12); color: #e57373; }
 .modal-fine { font-size: 0.75rem; color: var(--text-3); margin-top: 1rem; text-align: center; }
+.modal-inline-link { color: var(--accent); font-weight: 600; text-decoration: underline; margin-left: 0.15rem; }
+.modal-inline-link:hover { opacity: 0.88; }
 
 /* ── Footer ── */
 .site-footer {

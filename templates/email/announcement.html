@@ -23,7 +23,9 @@
       {% if site_url %}
       <a href="{{ site_url }}">{{ visit_label }}</a>
       {% endif %}
-      {% if unsubscribe_mailto %}
+      {% if unsubscribe_url %}
+      {% if site_url %}&nbsp;|&nbsp;{% endif %}<a href="{{ unsubscribe_url }}">{{ unsubscribe_label }}</a>
+      {% elif unsubscribe_mailto %}
       {% if site_url %}&nbsp;|&nbsp;{% endif %}<a href="{{ unsubscribe_mailto }}">{{ unsubscribe_label }}</a>
       {% endif %}
     </div>

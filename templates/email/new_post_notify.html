@@ -47,7 +47,9 @@
     <div class="footer">
       {{ footer_note }}<br>
       <a href="{{ post_url }}">{{ view_article_label }}</a>
-      {% if unsubscribe_mailto %}
+      {% if unsubscribe_url %}
+      &nbsp;|&nbsp;<a href="{{ unsubscribe_url }}">{{ unsubscribe_label }}</a>
+      {% elif unsubscribe_mailto %}
       &nbsp;|&nbsp;<a href="{{ unsubscribe_mailto }}">{{ unsubscribe_label }}</a>
       {% endif %}
     </div>

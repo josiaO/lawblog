@@ -97,8 +97,15 @@ img { max-width: 100%; }
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.sidebar-user-name { font-size: 0.85rem; font-weight: 600; }
-.sidebar-user-email { font-size: 0.72rem; color: var(--text-3); margin-top: 0.1rem; }
+.sidebar-user-info { min-width: 0; }
+.sidebar-user-name {
+  font-size: 0.85rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-user-email {
+  font-size: 0.72rem; color: var(--text-3); margin-top: 0.1rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 /* Admin main */
 .admin-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -336,8 +343,10 @@ img { max-width: 100%; }
 @media (max-width: 768px) {
   .admin-sidebar {
     position: fixed; left: -260px; top: 0; bottom: 0; 
+    width: 260px; max-width: 85vw;
     z-index: 1000;
     transition: left 0.3s ease;
+    overflow-x: hidden;
   }
   .admin-sidebar.open { left: 0; }
   .sidebar-toggle { display: flex; }
@@ -429,9 +438,14 @@ button.sidebar-link.sidebar-link-btn {
 }
 
 /* ── Admin help assistant (floating) ───────────────────────────── */
+/* Anchor only — a full-viewport layer (inset:0) blocked taps on mobile (e.g. sidebar toggle). */
 .admin-help-root {
   position: fixed;
-  inset: 0;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
   z-index: 10000;
   pointer-events: none;
 }

@@ -146,6 +146,7 @@
     Subscribers are synced to Brevo via the Contacts API. Welcome and new-post messages use the
     <strong>transactional</strong> API. The sender address must use a <strong>domain you own</strong> and verify under
     Brevo → SMTP &amp; API → Senders (not <code>@*.railway.app</code>).
+    Set environment variable <code>PUBLIC_BASE_URL</code> (or <code>SITE_URL</code>) to your live site so email links and one-click unsubscribe URLs point to the correct host.
   </p>
   <form method="POST" action="{{ url_for('admin_brevo_test_email') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />

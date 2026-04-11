@@ -100,18 +100,36 @@ async function submitSubscribe() {
   const result = document.getElementById('subResult');
   const email = (emailInput?.value || '').trim();
   const name = (nameInput?.value || '').trim();
+  const labelBusy = btn?.dataset?.busy || '…';
+  const labelDefault = btn?.dataset?.label || btn?.textContent?.trim() || 'Subscribe';
 
   if (!email) { showResult(result, 'Please enter your email.', false); return; }
 
   btn.disabled = true;
-  btn.textContent = '...';
+  btn.textContent = labelBusy;
 
   let token = '';
-  const siteKey = document.body.dataset.recaptchaKey;
+  const siteKey = (document.body.dataset.recaptchaKey || '').trim();
   if (siteKey) {
+    if (typeof grecaptcha === 'undefined') {
+      showResult(
+        result,
+        'Security check is still loading. Wait a moment and try again.',
+        false
+      );
+      btn.disabled = false;
+      btn.textContent = labelDefault;
+      return;
+    }
     try {
-      token = await grecaptcha.execute(siteKey, { action: 'subscribe' });
-    } catch(e) {}
+      token = await new Promise(function (resolve, reject) {
+        grecaptcha.ready(function () {
+          grecaptcha.execute(siteKey, { action: 'subscribe' }).then(resolve).catch(reject);
+        });
+      });
+    } catch (e) {
+      token = '';
+    }
   }
 
   const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -125,14 +143,23 @@ async function submitSubscribe() {
       },
       body: JSON.stringify({ email, name, recaptcha_token: token })
     });
-    const data = await res.json();
-    showResult(result, data.msg, data.ok);
-    if (data.ok) { emailInput.value = ''; if(nameInput) nameInput.value = ''; }
-  } catch(e) {
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      showResult(result, 'Something went wrong. Please try again.', false);
+      btn.disabled = false;
+      btn.textContent = labelDefault;
+      return;
+    }
+    const ok = !!data.ok;
+    showResult(result, data.msg || (ok ? 'Thank you!' : 'Something went wrong.'), ok);
+    if (ok) { emailInput.value = ''; if (nameInput) nameInput.value = ''; }
+  } catch (e) {
     showResult(result, 'Something went wrong. Please try again.', false);
   }
   btn.disabled = false;
-  btn.textContent = btn.dataset.label || 'Subscribe';
+  btn.textContent = labelDefault;
 }
 
 function showResult(el, msg, ok) {

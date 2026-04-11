@@ -34,22 +34,27 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.classList.toggle('sidebar-open', force);
   }
 
-  if (toggle) toggle.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
+  if (toggle) {
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSidebar();
+    });
+  }
   if (overlay) overlay.addEventListener('click', () => toggleSidebar(false));
   if (closeBtn) closeBtn.addEventListener('click', () => toggleSidebar(false));
 
-  // Close sidebar when clicking outside on mobile
-  document.addEventListener('click', function(e) {
-    if (sidebar && sidebar.classList.contains('open')) {
-      if (!sidebar.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
-        toggleSidebar(false);
-      }
-    }
+  // Close sidebar when clicking outside on mobile (bubble phase, after toggle handler)
+  document.addEventListener('click', function (e) {
+    if (!sidebar || !sidebar.classList.contains('open')) return;
+    if (sidebar.contains(e.target) || (toggle && toggle.contains(e.target))) return;
+    toggleSidebar(false);
   });
 
-  // Close sidebar on escape key
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') toggleSidebar(false);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!sidebar || !sidebar.classList.contains('open')) return;
+    toggleSidebar(false);
   });
 
   // File upload zones — drag and drop

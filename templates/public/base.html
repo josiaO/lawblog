@@ -132,12 +132,17 @@
       <div class="newsletter-form" id="newsletterForm">
         <input type="text" id="subName" placeholder="{{ 'Your name (optional)' if lang=='en' else 'Jina (si lazima)' }}" class="sub-input" />
         <input type="email" id="subEmail" placeholder="{{ 'your@email.com' }}" class="sub-input" required />
-        <button class="sub-btn" id="subBtn" onclick="submitSubscribe()">
+        <button type="button" class="sub-btn" id="subBtn" onclick="submitSubscribe()"
+          data-label="{{ 'Subscribe' if lang=='en' else 'Jiunge' }}"
+          data-busy="{{ '…' if lang=='en' else '…' }}">
           {{ 'Subscribe' if lang=='en' else 'Jiunge' }}
         </button>
       </div>
       <div class="sub-result" id="subResult" style="display:none;"></div>
-      <p class="modal-fine">{{ 'Powered by Brevo. Unsubscribe anytime.' if lang=='en' else 'Inaendeshwa na Brevo. Jitoe wakati wowote.' }}</p>
+      <p class="modal-fine">
+        {{ 'Powered by Brevo.' if lang=='en' else 'Inaendeshwa na Brevo.' }}
+        <a href="{{ url_for('newsletter_unsubscribe') }}" class="modal-inline-link">{{ 'Unsubscribe' if lang=='en' else 'Jitoe' }}</a>
+      </p>
     </div>
   </div>
 </div>
@@ -179,6 +184,7 @@
       <span class="footer-legal-links">
         <a href="{{ url_for('privacy') }}">{% if lang=='en' %}Privacy Policy{% else %}Sera ya Faragha{% endif %}</a> ·
         <a href="{{ url_for('terms') }}">{% if lang=='en' %}Terms & Conditions{% else %}Vigezo na Masharti{% endif %}</a>
+        · <a href="{{ url_for('newsletter_unsubscribe') }}">{% if lang=='en' %}Newsletter unsubscribe{% else %}Jitoe kwenye jarida{% endif %}</a>
       </span>
     </p>
   </div>

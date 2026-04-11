@@ -1,0 +1,80 @@
+{% extends "public/base.html" %}
+
+{% block title %}
+  {% if lang == 'en' %}Newsletter unsubscribe{% else %}Jitoe kwenye jarida{% endif %} — {{ settings.name }}
+{% endblock %}
+
+{% block content %}
+<section class="legal-page" style="max-width: 520px; margin: 0 auto; padding: 6rem 1.5rem 4rem;">
+  <div class="section-eyebrow" style="margin-bottom: 0.75rem;">
+    {% if lang == 'en' %}Newsletter{% else %}Jarida{% endif %}
+  </div>
+  <h1 class="legal-title" style="font-family: var(--font-display); font-size: clamp(1.75rem, 4vw, 2.25rem); margin-bottom: 1rem;">
+    {% if lang == 'en' %}Unsubscribe{% else %}Jitoe{% endif %}
+  </h1>
+  <p style="color: var(--text-2); line-height: 1.65; margin-bottom: 2rem;">
+    {% if lang == 'en' %}
+      Enter the email address you used to subscribe. If it is on our list, we will remove it.
+      You can also use the one-click link in the footer of any newsletter email.
+    {% else %}
+      Andika barua pepe uliyojisajilia nayo. Ikiwa iko kwenye orodha yetu, tutaiondoa.
+      Unaweza pia kutumia kiungo cha haraka katika sehemu ya chini ya barua yoyote ya jarida.
+    {% endif %}
+  </p>
+  <form method="post" id="newsletterUnsubForm" class="newsletter-unsub-form" action="{{ url_for('newsletter_unsubscribe') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="recaptcha_token" id="unsubRecaptchaToken" value="" />
+    <input
+      type="email"
+      name="email"
+      id="unsubEmail"
+      required
+      autocomplete="email"
+      aria-label="{% if lang == 'en' %}Email address{% else %}Barua pepe{% endif %}"
+      class="sub-input"
+      placeholder="{% if lang == 'en' %}your@email.com{% else %}barua@pepe.com{% endif %}"
+      style="width: 100%; margin-bottom: 1rem;"
+    />
+    <button type="submit" class="btn-primary" id="unsubSubmitBtn" style="width: 100%;">
+      {% if lang == 'en' %}Remove my email{% else %}Ondoa barua pepe yangu{% endif %}
+    </button>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  var form = document.getElementById('newsletterUnsubForm');
+  if (!form) return;
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var siteKey = (document.body.dataset.recaptchaKey || '').trim();
+    var hidden = document.getElementById('unsubRecaptchaToken');
+    var btn = document.getElementById('unsubSubmitBtn');
+    function finish() {
+      if (btn) btn.disabled = true;
+      form.submit();
+    }
+    if (!siteKey || typeof grecaptcha === 'undefined') {
+      if (hidden) hidden.value = '';
+      finish();
+      return;
+    }
+    if (btn) btn.disabled = true;
+    grecaptcha.ready(function () {
+      grecaptcha.execute(siteKey, { action: 'unsubscribe' }).then(function (t) {
+        if (hidden) hidden.value = t || '';
+        finish();
+      }).catch(function () {
+        if (hidden) hidden.value = '';
+        if (btn) btn.disabled = false;
+        alert(document.documentElement.lang === 'sw'
+          ? 'Angalia ya usalama imeshindwa. Jaribu tena.'
+          : 'Security check failed. Please try again.');
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}
