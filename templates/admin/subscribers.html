@@ -22,6 +22,7 @@
         <th>Name</th>
         <th>Subscribed</th>
         <th>Status</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -35,7 +36,23 @@
         </td>
         <td style="color:var(--text-2);">{{ s.name or '—' }}</td>
         <td style="color:var(--text-3);font-size:0.85rem;">{{ s.subscribed_at.strftime('%b %d, %Y') }}</td>
-        <td><span class="badge {{ 'badge-green' if s.active else 'badge-gray' }}">{{ 'Active' if s.active else 'Inactive' }}</span></td>
+        <td>
+          <span class="badge {{ 'badge-green' if s.active else 'badge-gray' }}" id="badge-sub-{{ s.id }}">
+            {{ 'Active' if s.active else 'Inactive' }}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <label class="toggle-switch" title="{{ 'Block user' if s.active else 'Unblock user' }}">
+              <input type="checkbox" {{ 'checked' if s.active else '' }} onchange="toggleSubscriber({{ s.id }}, this)" />
+              <span class="toggle-slider"></span>
+            </label>
+            <form method="POST" action="{{ url_for('admin_delete_subscriber', sub_id=s.id) }}" onsubmit="return confirm('Delete this subscriber? This cannot be undone.');" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+            </form>
+          </div>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -47,4 +64,33 @@
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function toggleSubscriber(id, checkbox) {
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  try {
+    const res = await fetch(`/admin/subscribers/${id}/toggle`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf,
+      },
+      body: '{}',
+    });
+    const data = await res.json();
+    const badge = document.getElementById(`badge-sub-${id}`);
+    if (badge) {
+      badge.textContent = data.active ? 'Active' : 'Inactive';
+      badge.className = 'badge ' + (data.active ? 'badge-green' : 'badge-gray');
+    }
+    checkbox.checked = data.active;
+  } catch (err) {
+    alert("Error updating subscriber status.");
+    checkbox.checked = !checkbox.checked;
+  }
+}
+</script>
 {% endblock %}

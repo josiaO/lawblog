@@ -922,8 +922,11 @@ def get_public_base_url():
         if v:
             return v
     if has_request_context():
-        return request.host_url.rstrip('/')
-    return ''
+        host = request.host_url.rstrip('/')
+        if 'railway.app' in host or 'localhost' in host or '127.0.0.1' in host:
+            return 'https://acds.africa'
+        return host
+    return 'https://acds.africa'
 
 
 def absolute_public_static_url(stored_path):
@@ -1870,6 +1873,23 @@ def admin_toggle_post(post_id):
 def admin_subscribers():
     subs = Subscriber.query.order_by(Subscriber.subscribed_at.desc()).all()
     return render_template('admin/subscribers.html', subs=subs)
+
+@app.route('/admin/subscribers/<int:sub_id>/toggle', methods=['POST'])
+@login_required
+def admin_toggle_subscriber(sub_id):
+    sub = Subscriber.query.get_or_404(sub_id)
+    sub.active = not sub.active
+    db.session.commit()
+    return jsonify({'active': sub.active})
+
+@app.route('/admin/subscribers/<int:sub_id>/delete', methods=['POST'])
+@login_required
+def admin_delete_subscriber(sub_id):
+    sub = Subscriber.query.get_or_404(sub_id)
+    db.session.delete(sub)
+    db.session.commit()
+    flash('Subscriber deleted.', 'success')
+    return redirect(url_for('admin_subscribers'))
 
 
 @app.route('/admin/broadcast', methods=['GET', 'POST'])
