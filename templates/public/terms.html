@@ -1,0 +1,99 @@
+{% extends "public/base.html" %}
+{% block title %}{% if lang=='en' %}Terms & Conditions{% else %}Vigezo na Masharti{% endif %} — {{ settings.name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="section-inner reveal" style="max-width: 800px; margin: 0 auto; padding-top: 4rem;">
+    <div class="section-header" style="text-align: left; margin-bottom: 3rem;">
+      <div class="section-eyebrow">{% if lang=='en' %}Legal{% else %}Kisheria{% endif %}</div>
+      <h1 class="section-title">{% if lang=='en' %}Terms & Conditions{% else %}Vigezo na Masharti{% endif %}</h1>
+      <p style="color: var(--text-3); font-size: 0.9rem; margin-top: 1rem;">
+        {% if lang=='en' %}Last updated: {{ now.strftime('%B %d, %Y') }}{% else %}Ilisasishwa mwisho: {{ now.strftime('%d %B, %Y') }}{% endif %}
+      </p>
+    </div>
+
+    <div class="prose" style="line-height: 1.8; color: var(--text-2);">
+      <div style="background: rgba(212, 175, 95, 0.1); border-left: 4px solid var(--accent); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+        <strong style="color: var(--accent); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">
+          {% if lang=='en' %}Disclaimer{% else %}Onyo{% endif %}
+        </strong>
+        <p style="margin: 0; font-weight: 600;">
+          {% if lang=='en' %}
+          The content on this website is for informational and educational purposes only. It is NOT legal advice.
+          {% else %}
+          Maudhui kwenye tovuti hii ni kwa madhumuni ya habari na elimu pekee. SIYO ushauri wa kisheria.
+          {% endif %}
+        </p>
+      </div>
+
+      <p>
+        {% if lang=='en' %}
+        Welcome to {{ settings.name }}. By accessing this website, you agree to comply with and be bound by the following terms and conditions of use.
+        {% else %}
+        Karibu kwenye {{ settings.name }}. Kwa kufikia tovuti hii, unakubali kutii na kufungwa na vigezo na masharti yafuatayo ya matumizi.
+        {% endif %}
+      </p>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}1. Use of Content{% else %}1. Matumizi ya Maudhui{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        All text, images, and other materials on this site are the intellectual property of {{ settings.name }} unless otherwise stated. You may read and share links to our content, but you may not reproduce or republish large portions of it without prior written permission.
+        {% else %}
+        Maandishi yote, picha, na vifaa vingine kwenye tovuti hii ni mali ya kiakili ya {{ settings.name }} isipokuwa iwe imeelezwa vinginevyo. Unaweza kusoma na kushiriki viungo vya maudhui yetu, lakini huwezi kuzalisha tena au kuchapisha sehemu kubwa yake bila ruhusa ya maandishi.
+        {% endif %}
+      </p>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}2. No Attorney-Client Relationship{% else %}2. Hakuna Uhusiano wa Wakili na Mteja{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        Viewing this website or contacting {{ settings.name }} through it does not create an attorney-client relationship. You should consult a qualified legal professional for advice regarding your specific situation.
+        {% else %}
+        Kuangalia tovuti hii au kuwasiliana na {{ settings.name }} kupitia hiyo hauanzishi uhusiano wa mteja na wakili. Unapaswa kushauriana na mtaalamu wa kisheria aliyehitimu kwa ushauri kuhusu hali yako maalum.
+        {% endif %}
+      </p>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}3. User Comments{% else %}3. Maoni ya Watumiaji{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        We welcome respectful discussion. However, we reserve the right to remove any comments that:
+        {% else %}
+        Tunakaribisha mijadala ya heshima. Walakini, tunahifadhi haki ya kuondoa maoni yoyote ambayo:
+        {% endif %}
+      </p>
+      <ul>
+        <li>{% if lang=='en' %}Are spam or promotional in nature.{% else %}Ni taka au yana asili ya matangazo.{% endif %}</li>
+        <li>{% if lang=='en' %}Contain hate speech, harassment, or illegal content.{% else %}Yana matusi, unyanyasaji, au maudhui haramu.{% endif %}</li>
+        <li>{% if lang=='en' %}Are off-topic or disruptive to the conversation.{% else %}Hayahusiani na mada au yanaharibu mazungumzo.{% endif %}</li>
+      </ul>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}4. Limitation of Liability{% else %}4. Ukomo wa Dhima{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        {{ settings.name }} will not be liable for any errors or omissions in the information provided on this site or for any losses, injuries, or damages from the display or use of this information.
+        {% else %}
+        {{ settings.name }} haitawajibika kwa makosa yoyote au upungufu katika taarifa zilizotolewa kwenye tovuti hii au kwa hasara, majeraha, au uharibifu kutokana na kuonyeshwa au matumizi ya taarifa hizi.
+        {% endif %}
+      </p>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}5. Changes to Terms{% else %}5. Mabadiliko ya Vigezo{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        We reserve the right to modify these terms at any time. Your continued use of the site following any such changes constitutes your acceptance of the new Terms.
+        {% else %}
+        Tunahifadhi haki ya kurekebisha vigezo hivi wakati wowote. Kuendelea kutumia tovuti kufuatia mabadiliko yoyote kama hayo kunamaanisha unakubali Vigezo vipya.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

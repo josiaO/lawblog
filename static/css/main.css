@@ -1063,6 +1063,9 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 }
 .footer-subscribe-btn:hover { background: var(--accent-glow); }
 .footer-copy { font-size: 0.78rem; color: var(--text-3); }
+.footer-legal-links { display: block; margin-top: 0.75rem; font-size: 0.7rem; color: var(--text-3); }
+.footer-legal-links a { color: var(--text-3); text-decoration: none; transition: color 0.2s; }
+.footer-legal-links a:hover { color: var(--accent); }
 
 /* ── Divider ── */
 .ornamental-divider {

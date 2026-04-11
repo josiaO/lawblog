@@ -176,6 +176,10 @@
 
     <p class="footer-copy">
       © {{ now.year }} {{ settings.name }}. {% if lang=='en' %}Crafted with purpose.{% else %}Imetengenezwa kwa kusudi.{% endif %}
+      <span class="footer-legal-links">
+        <a href="{{ url_for('privacy') }}">{% if lang=='en' %}Privacy Policy{% else %}Sera ya Faragha{% endif %}</a> ·
+        <a href="{{ url_for('terms') }}">{% if lang=='en' %}Terms & Conditions{% else %}Vigezo na Masharti{% endif %}</a>
+      </span>
     </p>
   </div>
 </footer>

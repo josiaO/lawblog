@@ -1371,6 +1371,16 @@ def about():
     return render_template('public/about.html')
 
 
+@app.route('/privacy')
+def privacy():
+    return render_template('public/privacy.html')
+
+
+@app.route('/terms')
+def terms():
+    return render_template('public/terms.html')
+
+
 @app.route('/blog')
 def blog():
     lang = get_lang()

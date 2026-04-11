@@ -1,0 +1,91 @@
+{% extends "public/base.html" %}
+{% block title %}{% if lang=='en' %}Privacy Policy{% else %}Sera ya Faragha{% endif %} — {{ settings.name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="section-inner reveal" style="max-width: 800px; margin: 0 auto; padding-top: 4rem;">
+    <div class="section-header" style="text-align: left; margin-bottom: 3rem;">
+      <div class="section-eyebrow">{% if lang=='en' %}Legal{% else %}Kisheria{% endif %}</div>
+      <h1 class="section-title">{% if lang=='en' %}Privacy Policy{% else %}Sera ya Faragha{% endif %}</h1>
+      <p style="color: var(--text-3); font-size: 0.9rem; margin-top: 1rem;">
+        {% if lang=='en' %}Effective Date: {{ now.strftime('%B %d, %Y') }}{% else %}Tarehe ya Kuanza: {{ now.strftime('%d %B, %Y') }}{% endif %}
+      </p>
+    </div>
+
+    <div class="prose" style="line-height: 1.8; color: var(--text-2);">
+      <p>
+        {% if lang=='en' %}
+        Your privacy is important to me. This policy explains how I collect, use, and protect your data when you visit this site.
+        {% else %}
+        Faragha yako ni muhimu kwangu. Sera hii inaelezea jinsi ninavyokusanya, kutumia, na kulinda data yako unapotembelea tovuti hii.
+        {% endif %}
+      </p>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}1. Data We Collect{% else %}1. Data Tunazokusanya{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        We only collect information that you voluntarily provide to us:
+        {% else %}
+        Tunakusanya tu taarifa ambazo unatoa kwetu kwa hiari:
+        {% endif %}
+      </p>
+      <ul>
+        <li><strong>{% if lang=='en' %}Newsletter:{% else %}Jarida:{% endif %}</strong> {% if lang=='en' %}If you subscribe, we collect your email address and name (optional) to send you updates.{% else %}Ukijiandikisha, tunakusanya barua pepe na jina lako (si lazima) ili kukutumia habari.{% endif %}</li>
+        <li><strong>{% if lang=='en' %}Comments:{% else %}Maoni:{% endif %}</strong> {% if lang=='en' %}When you leave a comment, we collect your name and the content of your message.{% else %}Unapoacha maoni, tunakusanya jina lako na maudhui ya ujumbe wako.{% endif %}</li>
+        <li><strong>{% if lang=='en' %}Contact:{% else %}Mawasiliano:{% endif %}</strong> {% if lang=='en' %}If you email us, we retain your email address to respond to your inquiry.{% else %}Ukitutumia barua pepe, tunahifadhi barua pepe yako ili kujibu hoja yako.{% endif %}</li>
+      </ul>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}2. How We Use Your Data{% else %}2. Jinsi Tunavyotumia Data Yako{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        Your data is used solely to provide the services you requested. We do not sell or share your personal information with third parties for marketing purposes.
+        {% else %}
+        Data yako inatumiwa tu kutoa huduma ulizoomba. Hatuziuzi wala kushiriki taarifa zako za kibinafsi na wahusika wengine kwa madhumuni ya masoko.
+        {% endif %}
+      </p>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}3. Third-Party Services{% else %}3. Huduma za Wahusika Wengine{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        We use trusted third-party services to help run the site:
+        {% else %}
+        Tunatumia huduma za wahusika wengine wanaoaminika kusaidia kuendesha tovuti:
+        {% endif %}
+      </p>
+      <ul>
+        <li><strong>Brevo:</strong> {% if lang=='en' %}For managing our email newsletter.{% else %}Kwa kusimamia jarida letu la barua pepe.{% endif %}</li>
+        <li><strong>Google Fonts & FontAwesome:</strong> {% if lang=='en' %}To provide consistent typography and icons.{% else %}Ili kutoa maandishi na alama zinazofanana.{% endif %}</li>
+        <li><strong>Google reCAPTCHA:</strong> {% if lang=='en' %}To prevent automated spam and bots.{% else %}Ili kuzuia taka na roboti.{% endif %}</li>
+      </ul>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}4. Cookies{% else %}4. Kuki (Cookies){% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        We use small text files called cookies to remember your preferences (like language settings) and to manage admin sessions. These do not track your behavior on other sites.
+        {% else %}
+        Tunatumia faili ndogo za maandishi zinazoitwa kuki kukumbuka mapendeleo yako (kama mipangilio ya lugha) na kusimamia vipindi vya wasimamizi. Hizi hazifuatilii tabia yako kwenye tovuti zingine.
+        {% endif %}
+      </p>
+
+      <h2 style="color: var(--text); font-family: var(--font-display); margin-top: 2rem;">
+        {% if lang=='en' %}5. Your Rights{% else %}5. Haki Zako{% endif %}
+      </h2>
+      <p>
+        {% if lang=='en' %}
+        You can unsubscribe from our newsletter at any time using the link in the footer of our emails, or by contacting us directly to have your data removed.
+        {% else %}
+        Unaweza kujiondoa kwenye jarida letu wakati wowote kwa kutumia kiungo kilicho chini ya barua pepe zetu, au kwa kuwasiliana nasi moja kwa moja ili data yako iondolewe.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
