@@ -21,14 +21,35 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Sidebar toggle for mobile
+  const sidebar = document.getElementById('adminSidebar');
+  const toggle = document.getElementById('sidebarToggle');
+  const overlay = document.getElementById('sidebarOverlay');
+  const closeBtn = document.getElementById('sidebarClose');
+
+  function toggleSidebar(state) {
+    if (!sidebar) return;
+    const force = state !== undefined ? state : !sidebar.classList.contains('open');
+    sidebar.classList.toggle('open', force);
+    if (overlay) overlay.classList.toggle('open', force);
+    document.body.classList.toggle('sidebar-open', force);
+  }
+
+  if (toggle) toggle.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
+  if (overlay) overlay.addEventListener('click', () => toggleSidebar(false));
+  if (closeBtn) closeBtn.addEventListener('click', () => toggleSidebar(false));
+
+  // Close sidebar when clicking outside on mobile
   document.addEventListener('click', function(e) {
-    const sidebar = document.getElementById('adminSidebar');
-    const toggle = document.getElementById('sidebarToggle');
-    if (sidebar && toggle && sidebar.classList.contains('open')) {
-      if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
-        sidebar.classList.remove('open');
+    if (sidebar && sidebar.classList.contains('open')) {
+      if (!sidebar.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
+        toggleSidebar(false);
       }
     }
+  });
+
+  // Close sidebar on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') toggleSidebar(false);
   });
 
   // File upload zones — drag and drop

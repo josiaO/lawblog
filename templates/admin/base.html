@@ -24,8 +24,14 @@
 
 {% if current_user.is_authenticated %}
 <div class="admin-layout">
+  <!-- Sidebar Overlay for mobile -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <!-- Sidebar -->
   <aside class="admin-sidebar" id="adminSidebar">
+    <button type="button" class="sidebar-close" id="sidebarClose" aria-label="Close sidebar">
+      <i class="fas fa-times"></i>
+    </button>
     <div class="sidebar-logo">
       <span class="sidebar-logo-icon">⚖</span>
       <div>
@@ -80,7 +86,7 @@
   <!-- Main -->
   <div class="admin-main">
     <header class="admin-header">
-      <button class="sidebar-toggle" id="sidebarToggle" onclick="document.getElementById('adminSidebar').classList.toggle('open')">
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
         <i class="fas fa-bars"></i>
       </button>
       <div class="admin-header-title">{% block page_title %}{% endblock %}</div>
