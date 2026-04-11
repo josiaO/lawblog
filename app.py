@@ -2510,8 +2510,11 @@ def init_db():
     with app.app_context():
         db.create_all()
         if not User.query.first():
-            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
-            admin_password = os.environ.get('ADMIN_PASSWORD', 'changeme123')
+            admin_email = os.environ.get('ADMIN_EMAIL')
+            admin_password = os.environ.get('ADMIN_PASSWORD')
+            if not admin_email or not admin_password:
+                print("❌ ADMIN_EMAIL and ADMIN_PASSWORD must be set in .env")
+                return
             user = User(email=admin_email)
             user.set_password(admin_password)
             db.session.add(user)
