@@ -115,6 +115,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   transition: var(--transition);
+  box-shadow: 0 10px 30px -25px rgba(0, 0, 0, 0.8);
 }
 .site-nav.scrolled {
   background: var(--bg);
@@ -303,6 +304,12 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   background-size: 40px 40px;
   mask-image: linear-gradient(to bottom, black, transparent);
 }
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.28) 100%);
+}
 
 .hero-inner {
   position: relative; z-index: 2;
@@ -325,6 +332,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   letter-spacing: -0.04em;
   margin-bottom: 2rem;
   color: var(--text);
+  text-wrap: balance;
 }
 .hero-title em {
   font-style: italic;
@@ -337,6 +345,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 .hero-desc {
   font-size: 1.25rem; color: var(--text-2); line-height: 1.6;
   max-width: 540px; margin-bottom: 3rem;
+  text-wrap: pretty;
 }
 
 .hero-actions { display: flex; gap: 1.5rem; flex-wrap: wrap; }
@@ -344,14 +353,14 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 .btn-primary {
   display: inline-flex; align-items: center; gap: 0.75rem;
   padding: 1.1rem 2.5rem;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
   color: var(--bg);
   font-weight: 800; font-size: 0.95rem;
   border-radius: var(--radius-sm);
   box-shadow: 0 10px 30px -10px hsla(var(--h-accent), var(--s-accent), 40%, 0.4);
 }
 .btn-primary:hover {
-  background: var(--text);
+  filter: brightness(1.03);
   transform: translateY(-2px);
   box-shadow: 0 15px 40px -10px hsla(var(--h-accent), var(--s-accent), 40%, 0.5);
 }
@@ -434,6 +443,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   font-size: clamp(2.5rem, 4vw, 3.5rem);
   font-weight: 900; line-height: 1.1;
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 .section-subtitle { color: var(--text-2); margin-top: 0.75rem; font-size: 1.05rem; max-width: 520px; }
 
@@ -448,12 +458,24 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   display: flex; flex-direction: column;
   position: relative;
   box-shadow: 0 4px 20px -8px rgba(0,0,0,0.3);
+  isolation: isolate;
 }
 .post-card:hover {
   border-color: var(--border-accent);
   transform: translateY(-8px);
   box-shadow: var(--shadow);
 }
+.post-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(130deg, var(--accent-glow), transparent 45%);
+  opacity: 0;
+  transition: opacity var(--transition);
+  pointer-events: none;
+  z-index: 0;
+}
+.post-card:hover::before { opacity: 1; }
 
 .card-cover {
   aspect-ratio: 4/3; overflow: hidden;
@@ -467,7 +489,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   background: linear-gradient(to bottom, transparent 60%, var(--bg-card));
 }
 
-.card-body { padding: 2rem; flex: 1; display: flex; flex-direction: column; }
+.card-body { padding: 2rem; flex: 1; display: flex; flex-direction: column; position: relative; z-index: 1; }
 
 .card-tags { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.25rem; }
 .card-tag {
@@ -1069,6 +1091,13 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   transition: var(--transition);
   box-shadow: var(--shadow);
 }
+.modal-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, var(--accent-glow), transparent 45%);
+  pointer-events: none;
+}
 .modal-overlay.open .modal-box { transform: scale(1) translateY(0); }
 
 .modal-close {
@@ -1135,6 +1164,13 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   .hero-desc { margin-inline: auto; }
   .hero-actions { justify-content: center; }
   .hero-visual { max-width: 440px; margin: 0 auto; }
+  .hero-quote-badge {
+    position: static;
+    margin-top: 1rem;
+    margin-inline: auto;
+    max-width: 100%;
+    text-align: left;
+  }
   .post-card.featured { grid-template-columns: 1fr; }
   .footer-inner { grid-template-columns: 1fr 1fr; }
 }
@@ -1145,6 +1181,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   .hamburger { display: flex !important; }
   .section { padding: 60px 0; }
   .hero-title { font-size: clamp(3rem, 12vw, 4rem); }
+  .hero { padding-top: 105px; }
   .footer-inner { grid-template-columns: 1fr; gap: 3rem; text-align: center; }
   .footer-brand, .footer-social-links { margin-inline: auto; justify-content: center; }
   .modal-inner { padding: 3rem 1.5rem 2rem; }
