@@ -21,34 +21,28 @@
 
 <!-- ── Hero ── -->
 <section class="hero">
-  {% if settings.banner_image %}
-  <div class="hero-bg hero-bg-photo" aria-hidden="true">
-    <img src="{{ settings.banner_image|asset }}" alt="" />
-  </div>
-  {% else %}
-  <div class="hero-bg"></div>
-  {% endif %}
+  <div class="hero-bg" aria-hidden="true"></div>
   <div class="hero-inner">
     <div class="hero-text">
       <div class="hero-eyebrow animate-fade-up">
-        {% if lang=='en' %}Law Student · Writer · Youth Advocate{% else %}Mwanafunzi wa Sheria · Mwandishi · Mlinzi wa Vijana{% endif %}
+        {% if lang=='en' %}Counsel & Craft{% else %}Counsel & Craft{% endif %}
       </div>
       <h1 class="hero-title animate-fade-up delay-1">
         {% if lang=='en' %}
-          Words that <em>shape</em> the world.
+          Legal Minds. <em>Youthful</em> Spirits.
         {% else %}
-          Maneno yanayo <em>badilisha</em> ulimwengu.
+          Akili za Kisheria. Roho za <em>Kijana</em>.
         {% endif %}
       </h1>
       <p class="hero-desc animate-fade-up delay-2">
         {{ settings.bio_en if lang=='en' else settings.bio_fr }}
       </p>
       <div class="hero-actions animate-fade-up delay-3">
-        <a href="{{ url_for('blog') }}" class="btn-primary btn-blog-hero">
-          {% if lang=='en' %}Read the Blog{% else %}Soma blogu{% endif %} →
+        <a href="{{ url_for('blog') }}" class="btn-primary">
+          {% if lang=='en' %}Explore Essays{% else %}Gundua Makala{% endif %}
         </a>
         <a href="{{ url_for('about') }}" class="btn-outline">
-          {% if lang=='en' %}About Me{% else %}Kuhusu mimi{% endif %}
+          {% if lang=='en' %}The Author{% else %}Mwandishi{% endif %}
         </a>
       </div>
     </div>
@@ -57,18 +51,16 @@
       <div class="hero-avatar-wrap">
         <div class="hero-avatar-ring"></div>
         {% if settings.avatar %}
-          <img src="{{ settings.avatar|asset }}" alt="{{ settings.name }}" class="hero-avatar-img" />
+          <img src="{{ settings.avatar|asset }}" alt="{{ settings.name }}" class="hero-avatar-img" width="380" height="380" />
         {% else %}
-          <div class="hero-avatar-placeholder">
-            <span class="ph-icon">⚖</span>
-            <span>{{ settings.name }}</span>
-          </div>
+          <div class="hero-avatar-img" style="background: var(--bg-3); display: flex; align-items: center; justify-content: center; font-size: 4rem;">⚖</div>
         {% endif %}
+        
         <div class="hero-quote-badge">
           <blockquote>
             {{ settings.hero_quote_en if lang=='en' else settings.hero_quote_fr }}
           </blockquote>
-          <cite>{% if lang=='en' %}Ulpian, Digest{% else %}Ulpian, Digest{% endif %}</cite>
+          <cite>{{ settings.name }}</cite>
         </div>
       </div>
     </div>
@@ -77,10 +69,10 @@
 
 <!-- ── Featured Posts ── -->
 {% if featured %}
-<section class="section" style="padding-top: 0;">
+<section class="section">
   <div class="section-inner">
     <div class="section-header reveal">
-      <div class="section-eyebrow">{% if lang=='en' %}Featured{% else %}Maarufu{% endif %}</div>
+      <div class="section-eyebrow">{% if lang=='en' %}Uteuzi{% else %}Uteuzi{% endif %}</div>
       <h2 class="section-title">
         {% if lang=='en' %}Thoughts worth reading{% else %}Mawazo yanayostahili kusomwa{% endif %}
       </h2>
@@ -90,15 +82,15 @@
       <article class="post-card {% if loop.first %}featured{% endif %} reveal">
         {% if p.cover_image %}
           <div class="card-cover">
-            <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" />
+            <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" width="800" height="600" />
           </div>
-        {% else %}
-          <div class="card-cover-placeholder">⚖</div>
         {% endif %}
         <div class="card-body">
           {% if p.tag_list() %}
           <div class="card-tags">
-            {% for tag in p.tag_list()[:2] %}<span class="card-tag">{{ tag }}</span>{% endfor %}
+            {% for tag in p.tag_list()[:2] %}
+              <span class="card-tag">{{ tag }}</span>
+            {% endfor %}
           </div>
           {% endif %}
           <h3 class="card-title">
@@ -110,9 +102,15 @@
             {{ p.excerpt_en if lang=='en' else (p.excerpt_fr or p.excerpt_en) }}
           </p>
           <div class="card-footer">
-            <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
-            <span class="card-reading">{{ p.reading_time(lang) }} min</span>
-            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
+            <div class="card-meta">
+              <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
+              <span class="card-reading">
+                {{ p.reading_time(lang) }} {% if lang=='en' %}min read{% else %}dk kusoma{% endif %}
+              </span>
+            </div>
+            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow" aria-label="Read more">
+              <i class="fa fa-arrow-right"></i>
+            </a>
           </div>
         </div>
       </article>
@@ -124,15 +122,15 @@
 
 <!-- ── Recent Posts ── -->
 {% if recent %}
-<section class="section" style="padding-top: 2rem;">
+<section class="section" style="background: var(--bg-2)">
   <div class="section-inner">
-    <div class="section-header reveal" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1rem;">
+    <div class="section-header reveal" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1.5rem;">
       <div>
-        <div class="section-eyebrow">{% if lang=='en' %}Latest{% else %}Hivi karibuni{% endif %}</div>
-        <h2 class="section-title">{% if lang=='en' %}From the desk{% else %}Kutoka mezani{% endif %}</h2>
+        <div class="section-eyebrow">{% if lang=='en' %}Journal{% else %}Jarida{% endif %}</div>
+        <h2 class="section-title">{% if lang=='en' %}From the Desk{% else %}Kutoka Mezani{% endif %}</h2>
       </div>
-      <a href="{{ url_for('blog') }}" class="btn-outline btn-blog-hero-outline">
-        {% if lang=='en' %}View all posts{% else %}Angalia machapisho yote{% endif %} →
+      <a href="{{ url_for('blog') }}" class="btn-outline">
+        {% if lang=='en' %}View All Posts{% else %}Tazama Yote{% endif %}
       </a>
     </div>
     <div class="posts-grid">
@@ -140,15 +138,15 @@
       <article class="post-card reveal">
         {% if p.cover_image %}
           <div class="card-cover">
-            <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" />
+            <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" width="400" height="300" />
           </div>
-        {% else %}
-          <div class="card-cover-placeholder">✍</div>
         {% endif %}
         <div class="card-body">
           {% if p.tag_list() %}
           <div class="card-tags">
-            {% for tag in p.tag_list()[:2] %}<span class="card-tag">{{ tag }}</span>{% endfor %}
+            {% for tag in p.tag_list()[:2] %}
+              <span class="card-tag">{{ tag }}</span>
+            {% endfor %}
           </div>
           {% endif %}
           <h3 class="card-title">
@@ -156,11 +154,14 @@
               {{ p.title_en if lang=='en' else (p.title_fr or p.title_en) }}
             </a>
           </h3>
-          <p class="card-excerpt">{{ (p.excerpt_en if lang=='en' else (p.excerpt_fr or p.excerpt_en)) | truncate(120) }}</p>
+          <p class="card-excerpt">
+            {{ (p.excerpt_en if lang=='en' else (p.excerpt_fr or p.excerpt_en)) | truncate(120) }}
+          </p>
           <div class="card-footer">
             <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
-            <span class="card-reading">{{ p.reading_time(lang) }} {% if lang=='en' %}min read{% else %}dk kusoma{% endif %}</span>
-            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
+            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow" aria-label="Read more">
+              <i class="fa fa-arrow-right"></i>
+            </a>
           </div>
         </div>
       </article>
@@ -176,27 +177,27 @@
     <div class="newsletter-cta reveal" style="
       background: var(--bg-card);
       border: 1px solid var(--border-accent);
-      border-radius: 20px;
-      padding: 4rem 3rem;
+      border-radius: var(--radius-lg);
+      padding: 4.5rem 2rem;
       text-align: center;
       position: relative;
       overflow: hidden;
     ">
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at center, var(--accent-glow), transparent);pointer-events:none;"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(circle at center, var(--accent-glow), transparent);pointer-events:none;"></div>
       <div style="position:relative;z-index:1;">
-        <div class="section-eyebrow">Newsletter</div>
-        <h2 class="section-title" style="margin-bottom:1rem;">
+        <div class="section-eyebrow">{% if lang=='en' %}Join Us{% else %}Jiunge Nasi{% endif %}</div>
+        <h2 class="section-title" style="margin-bottom:1.25rem;">
           {% if lang=='en' %}Don't miss a word.{% else %}Usikose neno.{% endif %}
         </h2>
-        <p style="color:var(--text-2);max-width:480px;margin:0 auto 2rem;font-size:1.05rem;">
+        <p style="color:var(--text-2);max-width:520px;margin:0 auto 2.5rem;font-size:1.15rem;line-height:1.6;">
           {% if lang=='en' %}
             Essays on law, justice, and the power of youth — straight to your inbox.
           {% else %}
             Makala kuhusu sheria, haki, na nguvu ya vijana — moja kwa moja kwenye barua pepe yako.
           {% endif %}
         </p>
-        <button type="button" class="btn-primary" style="font-size:1rem; padding: 1rem 2.5rem;" data-open-newsletter>
-          {% if lang=='en' %}Subscribe for free{% else %}Jiunge bure{% endif %}
+        <button type="button" class="btn-primary" data-open-newsletter>
+          {% if lang=='en' %}Subscribe for Free{% else %}Jiunge Bure{% endif %}
         </button>
       </div>
     </div>

@@ -32,15 +32,13 @@
       <article class="post-card reveal">
         {% if p.cover_image %}
         <div class="card-cover">
-          <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" />
+          <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" width="400" height="300" />
         </div>
-        {% else %}
-        <div class="card-cover-placeholder">{{ ['⚖','✍','📜','🏛','✊'][loop.index0 % 5] }}</div>
         {% endif %}
         <div class="card-body">
           {% if p.tag_list() %}
           <div class="card-tags">
-            {% for tag in p.tag_list()[:3] %}<span class="card-tag">{{ tag }}</span>{% endfor %}
+            {% for tag in p.tag_list()[:2] %}<span class="card-tag">{{ tag }}</span>{% endfor %}
           </div>
           {% endif %}
           <h2 class="card-title">
@@ -52,9 +50,13 @@
             {{ (p.excerpt_en if lang=='en' else (p.excerpt_fr or p.excerpt_en)) | truncate(140) }}
           </p>
           <div class="card-footer">
-            <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
-            <span class="card-reading">{{ p.reading_time(lang) }} {% if lang=='en' %}min read{% else %}dk kusoma{% endif %}</span>
-            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
+            <div class="card-meta">
+              <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
+              <span class="card-reading">{{ p.reading_time(lang) }} {% if lang=='en' %}min read{% else %}dk kusoma{% endif %}</span>
+            </div>
+            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow" aria-label="Read more">
+              <i class="fa fa-arrow-right"></i>
+            </a>
           </div>
         </div>
       </article>
