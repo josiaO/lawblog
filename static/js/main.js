@@ -104,8 +104,19 @@ function initNewsletter() {
 
   if (!modal) return;
 
+  let autoShowTimer = null;
+
   function openModal() {
+    // Clear auto-show timer if user opens manually
+    if (autoShowTimer) {
+      clearTimeout(autoShowTimer);
+      autoShowTimer = null;
+    }
+    
     modal.classList.add('open');
+    document.body.classList.add('no-scroll');
+    sessionStorage.setItem('nl_shown', '1');
+
     if (resultDiv) {
       resultDiv.style.display = 'none';
       resultDiv.className = 'sub-result';
@@ -119,21 +130,37 @@ function initNewsletter() {
 
   // Event Listeners for Opening
   document.addEventListener('click', e => {
-    if (e.target.closest('[data-open-newsletter]')) {
+    // We use a broader check to ensure all data-open-newsletter targets work
+    const target = e.target.closest('[data-open-newsletter]');
+    if (target) {
       e.preventDefault();
       openModal();
     }
   });
 
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
-  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  if (closeBtn) closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeModal();
+  });
 
-  // Auto-show after 40s
+  // Close on backdrop click
+  modal.addEventListener('click', e => { 
+    if (e.target === modal) closeModal(); 
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', e => { 
+    if (e.key === 'Escape' && modal.classList.contains('open')) {
+      closeModal();
+    }
+  });
+
+  // Auto-show after 40s (only if not already shown)
   if (!sessionStorage.getItem('nl_shown')) {
-    setTimeout(() => {
-      openModal();
-      sessionStorage.setItem('nl_shown', '1');
+    autoShowTimer = setTimeout(() => {
+      if (!modal.classList.contains('open')) {
+        openModal();
+      }
     }, 40000);
   }
 

@@ -953,51 +953,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 }
 .portfolio-award-link:hover { text-decoration: underline; }
 
-/* ── Newsletter modal ── */
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(6px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 1rem;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.3s;
-}
-.modal-overlay.open { opacity: 1; pointer-events: all; }
 
-.modal-box {
-  background: var(--bg-card);
-  border: 1px solid var(--border-accent);
-  border-radius: 20px; padding: 3rem;
-  max-width: 500px; width: 100%;
-  position: relative;
-  transform: translateY(20px);
-  transition: transform 0.3s;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
-}
-.modal-overlay.open .modal-box { transform: translateY(0); }
-
-.modal-close {
-  position: absolute; top: 1rem; right: 1.25rem;
-  font-size: 1.5rem; color: var(--text-3);
-  transition: color 0.2s;
-  line-height: 1;
-}
-.modal-close:hover { color: var(--text); }
-
-.modal-eyebrow { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.75rem; }
-.modal-title { font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.75rem; line-height: 1.2; }
-.modal-desc { font-size: 0.95rem; color: var(--text-2); margin-bottom: 2rem; line-height: 1.7; }
-
-.sub-input {
-  display: block; width: 100%;
-  padding: 0.9rem 1.2rem;
-  background: var(--bg-2); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text);
-  font-size: 0.95rem; font-family: inherit;
-  margin-bottom: 0.75rem;
-  transition: border-color 0.2s;
-}
 .sub-input:focus { outline: none; border-color: var(--accent); }
 .sub-input::placeholder { color: var(--text-3); }
 
