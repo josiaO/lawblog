@@ -52,11 +52,39 @@ document.addEventListener('DOMContentLoaded', function() {
   const ham = document.getElementById('hamburger');
   const mobileMenu = document.getElementById('mobileMenu');
   if (ham && mobileMenu) {
+    const setMenuState = (isOpen) => {
+      ham.classList.toggle('open', isOpen);
+      mobileMenu.classList.toggle('open', isOpen);
+      body.classList.toggle('no-scroll', isOpen);
+      ham.setAttribute('aria-expanded', String(isOpen));
+      mobileMenu.setAttribute('aria-hidden', String(!isOpen));
+    };
+
     ham.addEventListener('click', () => {
-      ham.classList.toggle('open');
-      mobileMenu.classList.toggle('open');
-      body.classList.toggle('no-scroll');
+      const isOpen = !mobileMenu.classList.contains('open');
+      setMenuState(isOpen);
     });
+
+    // Close mobile menu when a link is selected
+    mobileMenu.addEventListener('click', (e) => {
+      if (e.target.closest('a')) {
+        setMenuState(false);
+      }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('open')) {
+        setMenuState(false);
+      }
+    });
+
+    // Ensure menu closes when switching to desktop width
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 1024 && mobileMenu.classList.contains('open')) {
+        setMenuState(false);
+      }
+    }, { passive: true });
   }
 
   /* ── Scroll Reveal ── */
