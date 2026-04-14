@@ -86,6 +86,9 @@ body {
   transition: background var(--transition), color var(--transition);
   overflow-x: hidden;
 }
+body.no-scroll {
+  overflow: hidden;
+}
 
 ::selection { background: var(--selection); color: inherit; }
 

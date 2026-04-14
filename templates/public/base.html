@@ -81,14 +81,14 @@
         <span class="theme-icon moon">☾</span>
       </button>
 
-      <button class="hamburger" id="hamburger" aria-label="Menu">
+      <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false" aria-controls="mobileMenu">
         <span></span><span></span><span></span>
       </button>
     </div>
   </div>
 
   <!-- Mobile Drawer -->
-  <div class="mobile-menu" id="mobileMenu">
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
     <div class="mobile-menu-inner">
       <ul>
         <li><a href="{{ url_for('index') }}">{% if lang=='en' %}Home{% else %}Nyumbani{% endif %}</a></li>
