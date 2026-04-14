@@ -123,29 +123,30 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 }
 
 .nav-inner {
-  max-width: 1300px; margin: 0 auto;
+  max-width: var(--max-w); margin: 0 auto;
   padding: 0 1.5rem;
-  height: 80px;
-  display: flex; align-items: center; justify-content: space-between; gap: 2rem;
+  height: clamp(70px, 10vh, 90px);
+  display: flex; align-items: center; justify-content: space-between;
 }
 
 .nav-logo {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  max-width: 320px;
+  gap: 1rem;
+  flex-shrink: 0;
+  z-index: 1001;
 }
 .logo-img {
-  height: 42px; width: auto;
+  height: 38px; width: auto;
   object-fit: contain;
 }
 .logo-text {
   font-family: var(--font-display);
-  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.01em;
-  background: linear-gradient(to right, var(--text), var(--text-2));
+  letter-spacing: -0.02em;
+  background: linear-gradient(to bottom right, var(--text), var(--text-2));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -175,66 +176,97 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   transform: translateY(-1px);
 }
 
-.nav-controls { display: flex; align-items: center; gap: 1.25rem; }
+.nav-controls {
+  display: flex; align-items: center; gap: 1rem;
+  flex-shrink: 0;
+  z-index: 1001;
+}
 
-/* Language toggle */
-.lang-toggle {
-  display: flex; align-items: center; gap: 0.5rem;
-  background: var(--bg-3);
-  padding: 0.25rem;
+/* Lang Group */
+.lang-group {
+  display: flex; align-items: center; gap: 0.35rem;
+  background: var(--bg-card);
+  padding: 0.35rem 0.75rem;
   border-radius: 50px;
   border: 1px solid var(--border);
+  font-family: var(--font-mono);
 }
 .lang-btn {
   font-size: 0.75rem; font-weight: 700;
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%;
   color: var(--text-3);
+  padding: 0.2rem 0.4rem;
+  min-width: 32px;
+  text-align: center;
+  transition: color 0.2s;
 }
-.lang-btn.active {
-  background: var(--accent);
-  color: var(--bg);
-}
+.lang-btn.active { color: var(--accent); }
+.lang-sep { color: var(--border); font-size: 0.7rem; font-weight: 300; }
 
-/* Theme button */
+/* Theme Toggles */
 .theme-btn {
-  width: 42px; height: 42px;
+  width: 44px; height: 44px;
   border-radius: 50%;
   border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg-2);
+  background: var(--bg-card);
   color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 .theme-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--bg-3); }
-.theme-icon { position: absolute; transition: opacity 0.2s, transform 0.2s; }
-.theme-icon.sun { opacity: 0; transform: rotate(90deg); }
-.theme-icon.moon { opacity: 1; }
-[data-theme="light"] .theme-icon.sun { opacity: 1; transform: rotate(0); }
-[data-theme="light"] .theme-icon.moon { opacity: 0; transform: rotate(-90deg); }
+.theme-icon { position: absolute; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; }
+.theme-icon.sun { opacity: 0; transform: rotate(90deg) scale(0.5); }
+.theme-icon.moon { opacity: 1; transform: rotate(0) scale(1); }
+[data-theme="light"] .theme-icon.sun { opacity: 1; transform: rotate(0) scale(1); }
+[data-theme="light"] .theme-icon.moon { opacity: 0; transform: rotate(-90deg) scale(0.5); }
 
 /* Hamburger */
-.hamburger { display: none; flex-direction: column; gap: 5px; padding: 5px; }
-.hamburger span { display: block; width: 22px; height: 2px; background: var(--text-2); border-radius: 1px; transition: all 0.3s; }
-.hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px,5px); }
-.hamburger.open span:nth-child(2) { opacity: 0; }
-.hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px,-5px); }
+.hamburger {
+  display: flex; flex-direction: column; gap: 6px; padding: 10px;
+  cursor: pointer; border: none; background: none; transition: var(--transition);
+}
+.hamburger span { display: block; width: 24px; height: 1.5px; background: var(--text); border-radius: 1px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.hamburger.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: translateX(10px); }
+.hamburger.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
 
-/* Mobile menu */
+/* Mobile Menu Overlay */
 .mobile-menu {
-  display: none; padding: 1rem 2rem 1.5rem;
-  border-top: 1px solid var(--border);
+  position: fixed; inset: 0; z-index: 999;
+  background: var(--bg);
+  padding-top: 100px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-10px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.mobile-menu.open { display: block; }
-.mobile-menu ul { list-style: none; margin-bottom: 1rem; }
+.mobile-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.mobile-menu-inner {
+  max-width: 600px; margin: 0 auto;
+  padding: 2rem;
+  display: flex; flex-direction: column; height: calc(100% - 100px);
+}
+.mobile-menu ul { list-style: none; flex-grow: 1; }
+.mobile-menu ul li { border-bottom: 1px solid var(--border); }
 .mobile-menu ul li a {
-  display: block; padding: 0.6rem 0;
-  font-size: 1.05rem; color: var(--text-2);
-  border-bottom: 1px solid var(--border);
+  display: block; padding: 1.5rem 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem; font-weight: 700; color: var(--text);
 }
-.mobile-lang { display: flex; gap: 1rem; }
-.mobile-lang a { font-size: 0.9rem; font-weight: 600; color: var(--text-3); }
-.mobile-lang a.active { color: var(--accent); }
+.mobile-menu-footer {
+  padding: 2rem 0; color: var(--text-3); font-size: 0.85rem; border-top: 1px solid var(--border);
+}
+
+@media (min-width: 1025px) {
+  .hamburger { display: none; }
+  .mobile-menu { display: none; }
+}
+
+@media (max-width: 1024px) {
+  .nav-links { display: none; }
+  .nav-inner { height: 75px; }
+  .lang-group { padding: 0.25rem 0.5rem; }
+  .nav-controls { gap: 0.75rem; }
+}
 
 /* ── Flash messages ── */
 .flash-container { max-width: 1200px; margin: 80px auto 0; padding: 0 2rem; }

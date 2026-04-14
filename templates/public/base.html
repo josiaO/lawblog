@@ -42,8 +42,9 @@
 <!-- ── Cursor glow ── -->
 <div class="cursor-glow" id="cursorGlow"></div>
 
-<!-- ── Navigation ── -->
-<nav class="site-nav  <div class="nav-inner">
+<nav class="site-nav" id="siteNav">
+  <div class="nav-inner">
+    <!-- Logo -->
     <a href="{{ url_for('index') }}" class="nav-logo">
       {% if settings.logo %}
         <img src="{{ settings.logo|asset }}" alt="" class="logo-img" width="160" height="42" decoding="async" />
@@ -51,6 +52,7 @@
       <span class="logo-text">{{ settings.name }}</span>
     </a>
 
+    <!-- Desktop Nav Links -->
     <ul class="nav-links">
       <li><a href="{{ url_for('index') }}" {% if request.endpoint=='index' %}class="active"{% endif %}>
         {% if lang=='en' %}Home{% else %}Nyumbani{% endif %}
@@ -59,16 +61,18 @@
         {% if lang=='en' %}About{% else %}Kuhusu{% endif %}
       </a></li>
       <li><a href="{{ url_for('portfolio') }}" {% if request.endpoint=='portfolio' %}class="active"{% endif %}>
-        {% if lang=='en' %}Portfolio{% else %}Portfolio{% endif %}
+        Portfolio
       </a></li>
       <li><a href="{{ url_for('blog') }}" class="nav-blog-cta {% if request.endpoint in ('blog','post') %}active{% endif %}">
         {% if lang=='en' %}Read Blog{% else %}Soma Blogu{% endif %}
       </a></li>
     </ul>
 
+    <!-- Utility Controls -->
     <div class="nav-controls">
-      <div class="lang-toggle">
+      <div class="lang-group">
         <a href="{{ url_for('set_lang', lang='en') }}" class="lang-btn {% if lang=='en' %}active{% endif %}" aria-label="English">EN</a>
+        <span class="lang-sep">/</span>
         <a href="{{ url_for('set_lang', lang='sw') }}" class="lang-btn {% if lang=='sw' %}active{% endif %}" aria-label="Swahili">SW</a>
       </div>
 
@@ -83,13 +87,19 @@
     </div>
   </div>
 
+  <!-- Mobile Drawer -->
   <div class="mobile-menu" id="mobileMenu">
-    <ul>
-      <li><a href="{{ url_for('index') }}">{% if lang=='en' %}Home{% else %}Nyumbani{% endif %}</a></li>
-      <li><a href="{{ url_for('about') }}">{% if lang=='en' %}About{% else %}Kuhusu{% endif %}</a></li>
-      <li><a href="{{ url_for('portfolio') }}">Portfolio</a></li>
-      <li><a href="{{ url_for('blog') }}">{% if lang=='en' %}Blog{% else %}Blogu{% endif %}</a></li>
-    </ul>
+    <div class="mobile-menu-inner">
+      <ul>
+        <li><a href="{{ url_for('index') }}">{% if lang=='en' %}Home{% else %}Nyumbani{% endif %}</a></li>
+        <li><a href="{{ url_for('about') }}">{% if lang=='en' %}About{% else %}Kuhusu{% endif %}</a></li>
+        <li><a href="{{ url_for('portfolio') }}">Portfolio</a></li>
+        <li><a href="{{ url_for('blog') }}">{% if lang=='en' %}Blog{% else %}Blogu{% endif %}</a></li>
+      </ul>
+      <div class="mobile-menu-footer">
+        <p>© {{ now.year }} {{ settings.name }}</p>
+      </div>
+    </div>
   </div>
 </nav>
 

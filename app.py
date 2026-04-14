@@ -1339,7 +1339,7 @@ def get_lang():
 
 def get_settings():
     return {
-        'name': SiteSettings.get('name', 'Counsel & Craft'),
+        'name': SiteSettings.get('name', 'African Civic Dialog'),
         'tagline_en': SiteSettings.get('tagline_en', 'Law · Writing · Youth'),
         'tagline_fr': SiteSettings.get('tagline_fr', 'Sheria · Uandishi · Vijana'),
         'bio_en': SiteSettings.get('bio_en', 'A law student, writer, and voice for the youth.'),
