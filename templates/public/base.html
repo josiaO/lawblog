@@ -127,7 +127,7 @@
         {{ 'Words that move, delivered to you.' if lang=='en' else 'Maneno yanayohamisha, yatakufikia.' }}
       </h2>
       <p class="modal-desc">
-        {{ 'Join the newsletter — essays on law, justice & youth culture. No spam, ever.' if lang=='en' else 'Jiunge na jarida — makala kuhusu sheria, haki na vijana. Hakuna taka.' }}
+        {{ 'Occasional updates when we publish new analysis. Unsubscribe anytime.' if lang=='en' else 'Taarifa kadhaa tunapochapisha uchambuzi mpya. Unaweza kujitoa wakati wowote.' }}
       </p>
       <form class="newsletter-form" id="newsletterSubscribeForm" method="post" action="{{ url_for('subscribe') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off" />
@@ -182,7 +182,7 @@
     </div>
 
     <p class="footer-copy">
-      © {{ now.year }} {{ settings.name }}. {% if lang=='en' %}Crafted with purpose.{% else %}Imetengenezwa kwa kusudi.{% endif %}
+      © {{ now.year }} {{ settings.name }}. {% if lang=='en' %}All rights reserved.{% else %}Haki zote zimehifadhiwa.{% endif %}
       <span class="footer-legal-links">
         <a href="{{ url_for('privacy') }}">{% if lang=='en' %}Privacy Policy{% else %}Sera ya Faragha{% endif %}</a> ·
         <a href="{{ url_for('terms') }}">{% if lang=='en' %}Terms & Conditions{% else %}Vigezo na Masharti{% endif %}</a>

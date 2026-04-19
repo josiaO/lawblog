@@ -1340,10 +1340,10 @@ def get_lang():
 def get_settings():
     return {
         'name': SiteSettings.get('name', 'Counsel & Craft'),
-        'tagline_en': SiteSettings.get('tagline_en', 'Law · Writing · Youth'),
-        'tagline_fr': SiteSettings.get('tagline_fr', 'Sheria · Uandishi · Vijana'),
-        'bio_en': SiteSettings.get('bio_en', 'A law student, writer, and voice for the youth.'),
-        'bio_fr': SiteSettings.get('bio_fr', 'Mwanafunzi wa sheria, mwandishi, na sauti ya vijana.'),
+        'tagline_en': SiteSettings.get('tagline_en', 'Research · Advocacy · Public legal education'),
+        'tagline_fr': SiteSettings.get('tagline_fr', 'Utafiti · Ulinzi · Elimu ya sheria kwa umma'),
+        'bio_en': SiteSettings.get('bio_en', 'An independent initiative publishing clear analysis on law, rights, and accountable institutions.'),
+        'bio_fr': SiteSettings.get('bio_fr', 'Mpango huru unaochapisha uchambuzi mwazi kuhusu sheria, haki, na taasisi zinazowajibika.'),
         'email': SiteSettings.get('email', ''),
         'twitter': SiteSettings.get('twitter', ''),
         'linkedin': SiteSettings.get('linkedin', ''),
@@ -1516,9 +1516,32 @@ def set_lang(lang):
 @app.route('/')
 def index():
     lang = get_lang()
-    featured = Post.query.filter_by(published=True, featured=True).order_by(Post.created_at.desc()).limit(3).all()
-    recent = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).limit(6).all()
-    return render_template('public/index.html', featured=featured, recent=recent, lang=lang)
+    # Homepage: featured items first, then newest posts, deduplicated (no second "latest" grid).
+    featured = (
+        Post.query.filter_by(published=True, featured=True)
+        .order_by(Post.created_at.desc())
+        .limit(8)
+        .all()
+    )
+    recent = (
+        Post.query.filter_by(published=True)
+        .order_by(Post.created_at.desc())
+        .limit(16)
+        .all()
+    )
+    seen_ids = set()
+    home_posts = []
+    for p in featured:
+        if p.id not in seen_ids:
+            seen_ids.add(p.id)
+            home_posts.append(p)
+    for p in recent:
+        if p.id not in seen_ids:
+            seen_ids.add(p.id)
+            home_posts.append(p)
+        if len(home_posts) >= 6:
+            break
+    return render_template('public/index.html', home_posts=home_posts, lang=lang)
 
 
 @app.route('/about')

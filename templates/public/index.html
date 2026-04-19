@@ -6,13 +6,10 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": "{{ settings.name | replace('\"', '\\\"') }}",
-  "url": "{{ url_for('index', _external=True) }}",
-  "author": {
-      "@type": "Person",
-      "name": "{{ settings.name | replace('\"', '\\\"') }}"
-  }
+  "@type": "Organization",
+  "name": {{ (settings.name | tojson) }},
+  "url": {{ (url_for('index', _external=True) | tojson) }}{% if settings.logo %},
+  "logo": {{ (settings.logo | asset | tojson) }}{% endif %}
 }
 </script>
 {% endblock %}
@@ -20,7 +17,7 @@
 {% block content %}
 
 <!-- ── Hero ── -->
-<section class="hero">
+<section class="hero hero--org">
   {% if settings.banner_image %}
   <div class="hero-bg hero-bg-photo" aria-hidden="true">
     <img src="{{ settings.banner_image|asset }}" alt="" />
@@ -31,13 +28,13 @@
   <div class="hero-inner">
     <div class="hero-text">
       <div class="hero-eyebrow animate-fade-up">
-        {% if lang=='en' %}Law Student · Writer · Youth Advocate{% else %}Mwanafunzi wa Sheria · Mwandishi · Mlinzi wa Vijana{% endif %}
+        {{ settings.tagline_en if lang=='en' else settings.tagline_fr }}
       </div>
       <h1 class="hero-title animate-fade-up delay-1">
         {% if lang=='en' %}
-          Words that <em>shape</em> the world.
+          Clear thinking for a <em>fairer</em> public life.
         {% else %}
-          Maneno yanayo <em>badilisha</em> ulimwengu.
+          Mawazo wazi kwa <em>maisha</em> ya umma yenye haki.
         {% endif %}
       </h1>
       <p class="hero-desc animate-fade-up delay-2">
@@ -45,55 +42,98 @@
       </p>
       <div class="hero-actions animate-fade-up delay-3">
         <a href="{{ url_for('blog') }}" class="btn-primary btn-blog-hero">
-          {% if lang=='en' %}Read the Blog{% else %}Soma blogu{% endif %} →
+          {% if lang=='en' %}Insights &amp; publications{% else %}Uchambuzi na machapisho{% endif %} →
         </a>
         <a href="{{ url_for('about') }}" class="btn-outline">
-          {% if lang=='en' %}About Me{% else %}Kuhusu mimi{% endif %}
+          {% if lang=='en' %}About us{% else %}Kuhusu sisi{% endif %}
         </a>
+      </div>
+
+      <div class="hero-org-compact">
+        <div class="hero-org-compact__item">
+          <span class="hero-org-compact__label">{% if lang=='en' %}Focus{% else %}Makusudi{% endif %}</span>
+          <span class="hero-org-compact__val">{% if lang=='en' %}Law &amp; institutions{% else %}Sheria na taasisi{% endif %}</span>
+        </div>
+        <div class="hero-org-compact__item">
+          <span class="hero-org-compact__label">{% if lang=='en' %}Format{% else %}Muundo{% endif %}</span>
+          <span class="hero-org-compact__val">{% if lang=='en' %}Briefings &amp; essays{% else %}Ripoti na makala{% endif %}</span>
+        </div>
+        <div class="hero-org-compact__item">
+          <span class="hero-org-compact__label">{% if lang=='en' %}Audience{% else %}Hadhira{% endif %}</span>
+          <span class="hero-org-compact__val">{% if lang=='en' %}Citizens &amp; advocates{% else %}Raia na walinzi{% endif %}</span>
+        </div>
       </div>
     </div>
 
     <div class="hero-visual animate-fade-up delay-4">
-      <div class="hero-avatar-wrap">
-        <div class="hero-avatar-ring"></div>
-        {% if settings.avatar %}
-          <img src="{{ settings.avatar|asset }}" alt="{{ settings.name }}" class="hero-avatar-img" />
-        {% else %}
-          <div class="hero-avatar-placeholder">
-            <span class="ph-icon">⚖</span>
-            <span>{{ settings.name }}</span>
+      <div class="hero-org-panel">
+        <div class="hero-org-panel__top">
+          {% if settings.logo %}
+            <img src="{{ settings.logo|asset }}" alt="{{ settings.name }}" class="hero-org-panel__logo" width="200" height="80" decoding="async" />
+          {% else %}
+            <div class="hero-org-panel__mark" aria-hidden="true">
+              <span class="hero-org-panel__mark-icon">⚖</span>
+              <span class="hero-org-panel__mark-name">{{ settings.name }}</span>
+            </div>
+          {% endif %}
+        </div>
+        <p class="hero-org-panel__quote">
+          {{ settings.hero_quote_en if lang=='en' else settings.hero_quote_fr }}
+        </p>
+        <cite class="hero-org-panel__cite">{% if lang=='en' %}Principle{% else %}Kanuni{% endif %}</cite>
+        <div class="hero-org-panel__pillars">
+          <div class="hero-org-pillar">
+            <span class="hero-org-pillar__k">{% if lang=='en' %}Research{% else %}Utafiti{% endif %}</span>
+            <span class="hero-org-pillar__v">{% if lang=='en' %}Grounded analysis{% else %}Uchambuzi wa msingi{% endif %}</span>
           </div>
-        {% endif %}
-        <div class="hero-quote-badge">
-          <blockquote>
-            {{ settings.hero_quote_en if lang=='en' else settings.hero_quote_fr }}
-          </blockquote>
-          <cite>{% if lang=='en' %}Ulpian, Digest{% else %}Ulpian, Digest{% endif %}</cite>
+          <div class="hero-org-pillar">
+            <span class="hero-org-pillar__k">{% if lang=='en' %}Advocacy{% else %}Ulinzi{% endif %}</span>
+            <span class="hero-org-pillar__v">{% if lang=='en' %}Rights &amp; process{% else %}Haki na taratibu{% endif %}</span>
+          </div>
+          <div class="hero-org-pillar">
+            <span class="hero-org-pillar__k">{% if lang=='en' %}Education{% else %}Elimu{% endif %}</span>
+            <span class="hero-org-pillar__v">{% if lang=='en' %}Plain language{% else %}Lugha rahisi{% endif %}</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Featured Posts ── -->
-{% if featured %}
-<section class="section" style="padding-top: 0;">
+<!-- ── Featured & latest (single feed, deduplicated) ── -->
+{% if home_posts %}
+<section class="section section--home-posts">
   <div class="section-inner">
-    <div class="section-header reveal">
-      <div class="section-eyebrow">{% if lang=='en' %}Featured{% else %}Maarufu{% endif %}</div>
-      <h2 class="section-title">
-        {% if lang=='en' %}Thoughts worth reading{% else %}Mawazo yanayostahili kusomwa{% endif %}
-      </h2>
+    <div class="section-header reveal section-header--row">
+      <div>
+        <div class="section-eyebrow">{% if lang=='en' %}From our desk{% else %}Kutoka ofisini{% endif %}</div>
+        <h2 class="section-title">
+          {% if lang=='en' %}Featured &amp; new publications{% else %}Machapisho muhimu na mapya{% endif %}
+        </h2>
+        <p class="section-subtitle">
+          {% if lang=='en' %}
+            Editor’s picks and the newest analysis. Browse the full archive on the blog.
+          {% else %}
+            Machaguo ya mhariri na uchambuzi mpya. Tazama kumbukumbu kamili kwenye blogu.
+          {% endif %}
+        </p>
+      </div>
+      <a href="{{ url_for('blog') }}" class="btn-outline btn-blog-hero-outline">
+        {% if lang=='en' %}View all publications{% else %}Angalia machapisho yote{% endif %} →
+      </a>
     </div>
     <div class="posts-grid">
-      {% for p in featured %}
-      <article class="post-card {% if loop.first %}featured{% endif %} reveal">
+      {% for p in home_posts %}
+      <article class="post-card reveal {% if p.featured and loop.first %}featured{% endif %}">
+        {% if p.featured %}
+        <span class="card-ribbon">{% if lang=='en' %}Featured{% else %}Maarufu{% endif %}</span>
+        {% endif %}
         {% if p.cover_image %}
           <div class="card-cover">
-            <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" />
+            <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en if lang=='en' else (p.title_fr or p.title_en) }}" loading="lazy" />
           </div>
         {% else %}
-          <div class="card-cover-placeholder">⚖</div>
+          <div class="card-cover-placeholder">{{ ['⚖','✍','📜','🏛','✊'][loop.index0 % 5] }}</div>
         {% endif %}
         <div class="card-body">
           {% if p.tag_list() %}
@@ -107,60 +147,12 @@
             </a>
           </h3>
           <p class="card-excerpt">
-            {{ p.excerpt_en if lang=='en' else (p.excerpt_fr or p.excerpt_en) }}
+            {{ (p.excerpt_en if lang=='en' else (p.excerpt_fr or p.excerpt_en)) | truncate(140) }}
           </p>
           <div class="card-footer">
             <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
-            <span class="card-reading">{{ p.reading_time(lang) }} min</span>
-            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
-          </div>
-        </div>
-      </article>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-{% endif %}
-
-<!-- ── Recent Posts ── -->
-{% if recent %}
-<section class="section" style="padding-top: 2rem;">
-  <div class="section-inner">
-    <div class="section-header reveal" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1rem;">
-      <div>
-        <div class="section-eyebrow">{% if lang=='en' %}Latest{% else %}Hivi karibuni{% endif %}</div>
-        <h2 class="section-title">{% if lang=='en' %}From the desk{% else %}Kutoka mezani{% endif %}</h2>
-      </div>
-      <a href="{{ url_for('blog') }}" class="btn-outline btn-blog-hero-outline">
-        {% if lang=='en' %}View all posts{% else %}Angalia machapisho yote{% endif %} →
-      </a>
-    </div>
-    <div class="posts-grid">
-      {% for p in recent[:6] %}
-      <article class="post-card reveal">
-        {% if p.cover_image %}
-          <div class="card-cover">
-            <img src="{{ p.cover_image|asset }}" alt="{{ p.title_en }}" loading="lazy" />
-          </div>
-        {% else %}
-          <div class="card-cover-placeholder">✍</div>
-        {% endif %}
-        <div class="card-body">
-          {% if p.tag_list() %}
-          <div class="card-tags">
-            {% for tag in p.tag_list()[:2] %}<span class="card-tag">{{ tag }}</span>{% endfor %}
-          </div>
-          {% endif %}
-          <h3 class="card-title">
-            <a href="{{ url_for('post', slug=p.slug) }}">
-              {{ p.title_en if lang=='en' else (p.title_fr or p.title_en) }}
-            </a>
-          </h3>
-          <p class="card-excerpt">{{ (p.excerpt_en if lang=='en' else (p.excerpt_fr or p.excerpt_en)) | truncate(120) }}</p>
-          <div class="card-footer">
-            <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
             <span class="card-reading">{{ p.reading_time(lang) }} {% if lang=='en' %}min read{% else %}dk kusoma{% endif %}</span>
-            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
+            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow" aria-label="{% if lang=='en' %}Read article{% else %}Soma makala{% endif %}">→</a>
           </div>
         </div>
       </article>
@@ -171,32 +163,24 @@
 {% endif %}
 
 <!-- ── Newsletter CTA ── -->
-<section class="section" style="padding: 4rem 0 6rem;">
+<section class="section section--newsletter-cta">
   <div class="section-inner">
-    <div class="newsletter-cta reveal" style="
-      background: var(--bg-card);
-      border: 1px solid var(--border-accent);
-      border-radius: 20px;
-      padding: 4rem 3rem;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    ">
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at center, var(--accent-glow), transparent);pointer-events:none;"></div>
-      <div style="position:relative;z-index:1;">
+    <div class="newsletter-cta-block reveal">
+      <div class="newsletter-cta-block__glow" aria-hidden="true"></div>
+      <div class="newsletter-cta-block__inner">
         <div class="section-eyebrow">Newsletter</div>
-        <h2 class="section-title" style="margin-bottom:1rem;">
-          {% if lang=='en' %}Don't miss a word.{% else %}Usikose neno.{% endif %}
+        <h2 class="section-title newsletter-cta-block__title">
+          {% if lang=='en' %}Briefings in your inbox.{% else %}Ripoti kwenye barua pepe.{% endif %}
         </h2>
-        <p style="color:var(--text-2);max-width:480px;margin:0 auto 2rem;font-size:1.05rem;">
+        <p class="newsletter-cta-block__desc">
           {% if lang=='en' %}
-            Essays on law, justice, and the power of youth — straight to your inbox.
+            New publications and occasional updates — no noise, unsubscribe anytime.
           {% else %}
-            Makala kuhusu sheria, haki, na nguvu ya vijana — moja kwa moja kwenye barua pepe yako.
+            Machapisho mapya na taarifa kadhaa — hakuna kelele, unaweza kujitoa wakati wowote.
           {% endif %}
         </p>
-        <button type="button" class="btn-primary" style="font-size:1rem; padding: 1rem 2.5rem;" data-open-newsletter>
-          {% if lang=='en' %}Subscribe for free{% else %}Jiunge bure{% endif %}
+        <button type="button" class="btn-primary newsletter-cta-block__btn" data-open-newsletter>
+          {% if lang=='en' %}Subscribe{% else %}Jiunge{% endif %}
         </button>
       </div>
     </div>
