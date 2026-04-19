@@ -17,10 +17,10 @@
 {% block content %}
 
 <!-- ── Hero ── -->
-<section class="hero hero--org">
+<section id="homeHero" class="hero hero--org{% if settings.banner_image %} hero--has-banner{% endif %}">
   {% if settings.banner_image %}
   <div class="hero-bg hero-bg-photo" aria-hidden="true">
-    <img src="{{ settings.banner_image|asset }}" alt="" />
+    <img id="heroBannerImg" src="{{ settings.banner_image|asset }}" alt="" decoding="async" />
   </div>
   {% else %}
   <div class="hero-bg"></div>

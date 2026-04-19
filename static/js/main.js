@@ -2,6 +2,58 @@
  * COUNSEL & CRAFT — Main Interactions
  */
 
+/**
+ * Sample average luminance of the left portion of an image (where headlines usually sit).
+ * Returns "light" for bright images (use dark text) or "dark" (use light text).
+ */
+function sampleImageTone(img, leftFraction) {
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  if (!w || !h) return 'dark';
+  const frac = Math.min(Math.max(typeof leftFraction === 'number' ? leftFraction : 0.5, 0.15), 1);
+  const srcW = Math.max(1, Math.floor(w * frac));
+  const sw = Math.min(72, srcW);
+  const sh = Math.min(72, h);
+  const canvas = document.createElement('canvas');
+  canvas.width = sw;
+  canvas.height = sh;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return 'dark';
+  try {
+    ctx.drawImage(img, 0, 0, srcW, h, 0, 0, sw, sh);
+    const data = ctx.getImageData(0, 0, sw, sh).data;
+    let sum = 0;
+    let n = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const a = data[i + 3];
+      if (a < 16) continue;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      sum += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      n += 1;
+    }
+    if (!n) return 'dark';
+    const avg = sum / n;
+    return avg > 158 ? 'light' : 'dark';
+  } catch (e) {
+    return 'dark';
+  }
+}
+
+function bindHeroToneFromImage(img, root, leftFraction) {
+  if (!img || !root) return;
+  function apply() {
+    root.setAttribute('data-hero-tone', sampleImageTone(img, leftFraction));
+  }
+  if (img.complete && img.naturalWidth) {
+    apply();
+  } else {
+    img.addEventListener('load', apply, { once: true });
+    img.addEventListener('error', () => root.setAttribute('data-hero-tone', 'dark'), { once: true });
+  }
+}
+
 /* ── Theme Management ── */
 (function() {
   const saved = localStorage.getItem('theme') || 'dark';
@@ -107,6 +159,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
   /* ── Newsletter Logic ── */
   initNewsletter();
+
+  /* ── Hero / cover contrast (banner-driven text tone) ── */
+  const homeHero = document.getElementById('homeHero');
+  const heroBannerImg = document.getElementById('heroBannerImg');
+  if (homeHero && heroBannerImg) {
+    bindHeroToneFromImage(heroBannerImg, homeHero, 0.55);
+  }
+  const postHero = document.getElementById('postHero');
+  const postCoverImg = document.getElementById('postCoverImg');
+  if (postHero && postCoverImg) {
+    bindHeroToneFromImage(postCoverImg, postHero, 0.5);
+  }
 
   /* ── Flash Messages ── */
   const flashes = document.querySelectorAll('.flash');

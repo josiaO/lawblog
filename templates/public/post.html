@@ -39,10 +39,10 @@
 <div class="reading-progress">
   <div class="reading-progress-bar" id="readingBar"></div>
 </div><!-- Post hero -->
-<div class="post-hero">
+<div id="postHero" class="post-hero{% if post.cover_image %} post-hero--has-cover{% endif %}">
   {% if post.cover_image %}
   <div class="post-hero-bg">
-    <img src="{{ post.cover_image|asset }}" alt="" width="1920" height="1080" />
+    <img id="postCoverImg" src="{{ post.cover_image|asset }}" alt="" width="1920" height="1080" decoding="async" />
   </div>
   {% else %}
   <div class="post-hero-fallback"></div>
