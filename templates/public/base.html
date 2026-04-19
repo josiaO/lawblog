@@ -42,16 +42,17 @@
 <!-- ── Cursor glow ── -->
 <div class="cursor-glow" id="cursorGlow"></div>
 
-<!-- ── Navigation ── -->
 <nav class="site-nav" id="siteNav">
   <div class="nav-inner">
-    <a href="{{ url_for('index') }}" class="nav-logo{% if settings.logo %} nav-logo--with-image{% endif %}">
+    <!-- Logo -->
+    <a href="{{ url_for('index') }}" class="nav-logo">
       {% if settings.logo %}
-        <img src="{{ settings.logo|asset }}" alt="" class="logo-img" width="160" height="48" decoding="async" />
+        <img src="{{ settings.logo|asset }}" alt="" class="logo-img" width="160" height="42" decoding="async" />
       {% endif %}
-      <span class="logo-text{% if settings.logo %} logo-text--with-mark{% endif %}">{{ settings.name }}</span>
+      <span class="logo-text">{{ settings.name }}</span>
     </a>
 
+    <!-- Desktop Nav Links -->
     <ul class="nav-links">
       <li><a href="{{ url_for('index') }}" {% if request.endpoint=='index' %}class="active"{% endif %}>
         {% if lang=='en' %}Home{% else %}Nyumbani{% endif %}
@@ -59,46 +60,45 @@
       <li><a href="{{ url_for('about') }}" {% if request.endpoint=='about' %}class="active"{% endif %}>
         {% if lang=='en' %}About{% else %}Kuhusu{% endif %}
       </a></li>
-      <li><a href="{{ url_for('blog') }}" class="nav-blog-cta {% if request.endpoint in ('blog','post') %}active{% endif %}">
-        {% if lang=='en' %}Blog{% else %}Blogu{% endif %}
-      </a></li>
       <li><a href="{{ url_for('portfolio') }}" {% if request.endpoint=='portfolio' %}class="active"{% endif %}>
-        {% if lang=='en' %}Portfolio{% else %}Portfolio{% endif %}
+        Portfolio
+      </a></li>
+      <li><a href="{{ url_for('blog') }}" class="nav-blog-cta {% if request.endpoint in ('blog','post') %}active{% endif %}">
+        {% if lang=='en' %}Read Blog{% else %}Soma Blogu{% endif %}
       </a></li>
     </ul>
 
+    <!-- Utility Controls -->
     <div class="nav-controls">
-      <!-- Language -->
-      <div class="lang-toggle">
-        <a href="{{ url_for('set_lang', lang='en') }}" class="lang-btn {% if lang=='en' %}active{% endif %}">EN</a>
+      <div class="lang-group">
+        <a href="{{ url_for('set_lang', lang='en') }}" class="lang-btn {% if lang=='en' %}active{% endif %}" aria-label="English">EN</a>
         <span class="lang-sep">/</span>
-        <a href="{{ url_for('set_lang', lang='sw') }}" class="lang-btn {% if lang=='sw' %}active{% endif %}">SW</a>
+        <a href="{{ url_for('set_lang', lang='sw') }}" class="lang-btn {% if lang=='sw' %}active{% endif %}" aria-label="Swahili">SW</a>
       </div>
 
-      <!-- Theme -->
-      <button class="theme-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+      <button class="theme-btn" id="themeToggle" aria-label="Toggle theme">
         <span class="theme-icon sun">☀</span>
         <span class="theme-icon moon">☾</span>
       </button>
 
-      <!-- Mobile menu -->
-      <button class="hamburger" id="hamburger" aria-label="Menu">
+      <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false" aria-controls="mobileMenu">
         <span></span><span></span><span></span>
       </button>
     </div>
   </div>
 
-  <!-- Mobile menu -->
-  <div class="mobile-menu" id="mobileMenu">
-    <ul>
-      <li><a href="{{ url_for('index') }}">{% if lang=='en' %}Home{% else %}Nyumbani{% endif %}</a></li>
-      <li><a href="{{ url_for('about') }}">{% if lang=='en' %}About{% else %}Kuhusu{% endif %}</a></li>
-      <li><a href="{{ url_for('blog') }}">{% if lang=='en' %}Blog{% else %}Blogu{% endif %}</a></li>
-      <li><a href="{{ url_for('portfolio') }}">Portfolio</a></li>
-    </ul>
-    <div class="mobile-lang">
-      <a href="{{ url_for('set_lang', lang='en') }}" class="{% if lang=='en' %}active{% endif %}">EN</a>
-      <a href="{{ url_for('set_lang', lang='sw') }}" class="{% if lang=='sw' %}active{% endif %}">SW</a>
+  <!-- Mobile Drawer -->
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+    <div class="mobile-menu-inner">
+      <ul>
+        <li><a href="{{ url_for('index') }}">{% if lang=='en' %}Home{% else %}Nyumbani{% endif %}</a></li>
+        <li><a href="{{ url_for('about') }}">{% if lang=='en' %}About{% else %}Kuhusu{% endif %}</a></li>
+        <li><a href="{{ url_for('portfolio') }}">Portfolio</a></li>
+        <li><a href="{{ url_for('blog') }}">{% if lang=='en' %}Blog{% else %}Blogu{% endif %}</a></li>
+      </ul>
+      <div class="mobile-menu-footer">
+        <p>© {{ now.year }} {{ settings.name }}</p>
+      </div>
     </div>
   </div>
 </nav>
@@ -118,29 +118,27 @@
 </main>
 
 <!-- ── Newsletter Modal ── -->
-<div class="modal-overlay" id="newsletterModal" role="dialog" aria-modal="true" aria-label="Newsletter">
+<div class="modal-overlay" id="newsletterModal" role="dialog" aria-modal="true">
   <div class="modal-box">
     <button class="modal-close" id="modalClose" aria-label="Close">×</button>
     <div class="modal-inner">
-      <div class="modal-eyebrow">{{ '📬 Stay in the loop' if lang=='en' else '📬 Kuwa na habari' }}</div>
+      <div class="modal-eyebrow">{{ '📬 Legal Insights' if lang=='en' else '📬 Maarifa ya Kisheria' }}</div>
       <h2 class="modal-title">
-        {{ 'Words that move, delivered to you.' if lang=='en' else 'Maneno yanayohamisha, yatakufikia.' }}
+        {{ 'Perspectives that matter.' if lang=='en' else 'Mawazo yenye maana.' }}
       </h2>
       <p class="modal-desc">
         {{ 'Occasional updates when we publish new analysis. Unsubscribe anytime.' if lang=='en' else 'Taarifa kadhaa tunapochapisha uchambuzi mpya. Unaweza kujitoa wakati wowote.' }}
       </p>
       <form class="newsletter-form" id="newsletterSubscribeForm" method="post" action="{{ url_for('subscribe') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off" />
-        <input type="hidden" name="recaptcha_token" id="subRecaptchaToken" value="" autocomplete="off" />
-        <input type="text" name="name" id="subName" placeholder="{{ 'Your name (optional)' if lang=='en' else 'Jina (si lazima)' }}" class="sub-input" maxlength="200" autocomplete="name" />
-        <input type="email" name="email" id="subEmail" placeholder="{{ 'your@email.com' }}" class="sub-input" required maxlength="254" autocomplete="email" inputmode="email" />
-        <button type="submit" class="sub-btn" id="subBtn"
-          data-label="{{ 'Subscribe' if lang=='en' else 'Jiunge' }}"
-          data-busy="{{ '…' if lang=='en' else '…' }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="recaptcha_token" id="subRecaptchaToken" value="" />
+        <input type="text" name="name" id="subName" placeholder="{{ 'Full Name (Optional)' if lang=='en' else 'Jina Kamili (Si lazima)' }}" class="sub-input" />
+        <input type="email" name="email" id="subEmail" placeholder="email@address.com" class="sub-input" required />
+        <button type="submit" class="sub-btn" id="subBtn" data-label="{{ 'Subscribe' if lang=='en' else 'Jiunge' }}" data-busy="…">
           {{ 'Subscribe' if lang=='en' else 'Jiunge' }}
         </button>
       </form>
-      <div class="sub-result" id="subResult" style="display:none;"></div>
+      <div class="sub-result" id="subResult"></div>
       <p class="modal-fine">
         {{ 'Powered by Brevo.' if lang=='en' else 'Inaendeshwa na Brevo.' }}
         <a href="{{ url_for('newsletter_unsubscribe') }}" class="modal-inline-link">{{ 'Unsubscribe' if lang=='en' else 'Jitoe' }}</a>
@@ -153,42 +151,40 @@
 <footer class="site-footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      {% if settings.logo %}
-      <img src="{{ settings.logo|asset }}" alt="" class="footer-logo-img" width="120" height="40" decoding="async" />
-      {% endif %}
-      <span class="footer-name">{{ settings.name }}</span>
+      <a href="{{ url_for('index') }}">
+        {% if settings.logo %}
+          <img src="{{ settings.logo|asset }}" alt="" class="footer-logo-img" width="120" height="40" />
+        {% endif %}
+        <span class="footer-name">{{ settings.name }}</span>
+      </a>
       <p class="footer-tagline">{{ settings.tagline_en if lang=='en' else settings.tagline_fr }}</p>
     </div>
 
-    <div class="footer-links">
-      {% if settings.email %}
-      <a href="mailto:{{ settings.email }}" class="footer-link" title="Email"><i class="fa fa-envelope"></i></a>
-      {% endif %}
-      {% if settings.twitter %}
-      <a href="{{ settings.twitter }}" class="footer-link" target="_blank" title="Twitter/X"><i class="fab fa-x-twitter"></i></a>
-      {% endif %}
-      {% if settings.linkedin %}
-      <a href="{{ settings.linkedin }}" class="footer-link" target="_blank" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-      {% endif %}
-      {% if settings.instagram %}
-      <a href="{{ settings.instagram }}" class="footer-link" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
-      {% endif %}
+    <div class="footer-nav">
+      <h4 class="footer-links-title">{% if lang=='en' %}Connect{% else %}Ungana{% endif %}</h4>
+      <div class="footer-links">
+        {% if settings.email %}<a href="mailto:{{ settings.email }}" class="footer-link"><i class="fa fa-envelope"></i></a>{% endif %}
+        {% if settings.twitter %}<a href="{{ settings.twitter }}" class="footer-link" target="_blank"><i class="fab fa-x-twitter"></i></a>{% endif %}
+        {% if settings.linkedin %}<a href="{{ settings.linkedin }}" class="footer-link" target="_blank"><i class="fab fa-linkedin-in"></i></a>{% endif %}
+        {% if settings.instagram %}<a href="{{ settings.instagram }}" class="footer-link" target="_blank"><i class="fab fa-instagram"></i></a>{% endif %}
+      </div>
     </div>
 
-    <div class="footer-actions">
-      <button type="button" class="footer-subscribe-btn" id="footerSubscribeBtn" data-open-newsletter>
-        {{ '✉ Subscribe to Newsletter' if lang=='en' else '✉ Jiunge na jarida' }}
+    <div class="footer-cta">
+      <h4 class="footer-links-title">{% if lang=='en' %}Newsletter{% else %}Jarida{% endif %}</h4>
+      <button type="button" class="footer-subscribe-btn" data-open-newsletter>
+        {{ 'Join the inner circle' if lang=='en' else 'Jiunge na orodha' }}
       </button>
     </div>
 
-    <p class="footer-copy">
-      © {{ now.year }} {{ settings.name }}. {% if lang=='en' %}All rights reserved.{% else %}Haki zote zimehifadhiwa.{% endif %}
-      <span class="footer-legal-links">
-        <a href="{{ url_for('privacy') }}">{% if lang=='en' %}Privacy Policy{% else %}Sera ya Faragha{% endif %}</a> ·
-        <a href="{{ url_for('terms') }}">{% if lang=='en' %}Terms & Conditions{% else %}Vigezo na Masharti{% endif %}</a>
-        · <a href="{{ url_for('newsletter_unsubscribe') }}">{% if lang=='en' %}Newsletter unsubscribe{% else %}Jitoe kwenye jarida{% endif %}</a>
-      </span>
-    </p>
+    <div class="footer-bottom">
+      <p>© {{ now.year }} {{ settings.name }}. {% if lang=='en' %}All rights reserved.{% else %}Haki zote zimehifadhiwa.{% endif %}</p>
+      <div class="footer-legal-links">
+        <a href="{{ url_for('privacy') }}">{% if lang=='en' %}Privacy Policy{% else %}Sera ya Faragha{% endif %}</a>
+        <a href="{{ url_for('terms') }}">{% if lang=='en' %}Terms &amp; Conditions{% else %}Vigezo na Masharti{% endif %}</a>
+        <a href="{{ url_for('newsletter_unsubscribe') }}">{% if lang=='en' %}Newsletter unsubscribe{% else %}Jitoe kwenye jarida{% endif %}</a>
+      </div>
+    </div>
   </div>
 </footer>
 

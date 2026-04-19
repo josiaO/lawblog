@@ -38,13 +38,11 @@
 <!-- Reading progress -->
 <div class="reading-progress">
   <div class="reading-progress-bar" id="readingBar"></div>
-</div>
-
-<!-- Post hero -->
+</div><!-- Post hero -->
 <div class="post-hero">
   {% if post.cover_image %}
   <div class="post-hero-bg">
-    <img src="{{ post.cover_image|asset }}" alt="" />
+    <img src="{{ post.cover_image|asset }}" alt="" width="1920" height="1080" />
   </div>
   {% else %}
   <div class="post-hero-fallback"></div>
@@ -85,23 +83,14 @@
 <!-- Post body -->
 <div class="post-body-wrap">
 
-  <!-- Reading time badge (sticky) -->
-  <div style="
-    display:flex; align-items:center; gap:0.75rem;
-    margin-bottom: 3rem;
-    padding: 0.9rem 1.5rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 50px;
-    width: fit-content;
-    font-size: 0.85rem; color: var(--text-2);
-  ">
-    <span style="color:var(--accent);">⏱</span>
-    <span>
+  <!-- Reading time badge -->
+  <div class="post-reading-badge reveal">
+    <span class="badge-icon">⏱</span>
+    <span class="badge-text">
       {% if lang=='en' %}
-        Estimated reading time: <strong style="color:var(--text);">{{ post.reading_time(lang) }} minutes</strong>
+        Estimated reading time: <strong>{{ post.reading_time(lang) }} minutes</strong>
       {% else %}
-        Muda wa kusoma: <strong style="color:var(--text);">{{ post.reading_time(lang) }} dakika</strong>
+        Muda wa kusoma: <strong>{{ post.reading_time(lang) }} dakika</strong>
       {% endif %}
     </span>
   </div>
@@ -109,36 +98,57 @@
   <!-- Excerpt / lead -->
   {% set excerpt = post.excerpt_en if lang=='en' else (post.excerpt_fr or post.excerpt_en) %}
   {% if excerpt %}
-  <p style="
-    font-family: var(--font-display);
-    font-size: 1.35rem; font-style: italic;
-    color: var(--text-2); line-height: 1.7;
-    margin-bottom: 2.5rem;
-    padding-bottom: 2.5rem;
-    border-bottom: 1px solid var(--border);
-  ">{{ excerpt }}</p>
+  <p class="post-lead reveal">{{ excerpt }}</p>
   {% endif %}
 
   <!-- Main content -->
-  <article class="post-content" id="articleBody">
+  <article class="post-content reveal" id="articleBody">
     {{ post.rendered_body(lang) | safe }}
   </article>
 
   <!-- Tags -->
   {% if post.tag_list() %}
-  <div style="margin-top: 3rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-    <span style="font-size:0.78rem; color:var(--text-3); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-right:0.5rem;">
-      {% if lang=='en' %}Tags{% else %}Lebo{% endif %}
-    </span>
+  <div class="post-tags-list reveal">
+    <span class="tags-label">{% if lang=='en' %}Tagged in{% else %}Zimepata lebo{% endif %}</span>
     {% for tag in post.tag_list() %}
-    <a href="{{ url_for('blog', tag=tag) }}" class="card-tag" style="text-decoration:none;">{{ tag }}</a>
+    <a href="{{ url_for('blog', tag=tag) }}" class="card-tag">{{ tag }}</a>
     {% endfor %}
   </div>
   {% endif %}
 
+  <!-- Share -->
+  <div class="post-share reveal">
+    <span class="post-share-label">{% if lang=='en' %}Share this insight{% else %}Shiriki maarifa haya{% endif %}</span>
+    <div class="share-btns">
+      <button class="share-btn" onclick="sharePost('twitter', '{{ request.url }}', '{{ post.title_en }}')">
+        <i class="fab fa-x-twitter"></i>
+      </button>
+      <button class="share-btn" onclick="sharePost('linkedin', '{{ request.url }}', '{{ post.title_en }}')">
+        <i class="fab fa-linkedin-in"></i>
+      </button>
+      <button class="share-btn" onclick="sharePost('facebook', '{{ request.url }}', '{{ post.title_en }}')">
+        <i class="fab fa-facebook-f"></i>
+      </button>
+      <button class="share-btn copy-link-btn" data-copy-done="{% if lang=='en' %}✓ Copied!{% else %}✓ Imenakiliwa!{% endif %}" onclick="sharePost('copy', '{{ request.url }}', '{{ post.title_en }}')">
+        <i class="fa fa-link"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Newsletter nudge -->
+  <div class="post-newsletter-nudge reveal">
+    <div class="nudge-content">
+      <h3>{% if lang=='en' %}Enjoyed this read?{% else %}Umesisimka na haya?{% endif %}</h3>
+      <p>{% if lang=='en' %}Join our selective list for more legal perspectives straight to your inbox.{% else %}Jiunge na orodha yetu kwa maarifa zaidi ya kisheria kwenye barua pepe yako.{% endif %}</p>
+    </div>
+    <button type="button" class="btn-primary" data-open-newsletter>
+      {% if lang=='en' %}Subscribe{% else %}Jiunge{% endif %}
+    </button>
+  </div>
+
   <!-- Comments -->
-  <section class="comments-section" id="comments" data-post-slug="{{ post.slug }}" data-lang="{{ lang }}">
-    <h2 class="comments-title">{% if lang=='en' %}Comments{% else %}Maoni{% endif %}</h2>
+  <section class="comments-section reveal" id="comments" data-post-slug="{{ post.slug }}" data-lang="{{ lang }}">
+    <h2 class="comments-title">{% if lang=='en' %}Join the Dialogue{% else %}Jiunge na Mazungumzo{% endif %}</h2>
     <p class="comments-hint">{% if lang=='en' %}Share your thoughts — your name and message will appear after you submit.{% else %}Shiriki mawazo yako — jina na ujumbe wako utaonekana baada ya kutuma.{% endif %}</p>
 
     {% if comments %}
@@ -156,70 +166,28 @@
     {% endif %}
 
     <div class="comment-form-grid">
-      <input type="text" id="commentName" class="comment-input" maxlength="120" placeholder="{% if lang=='en' %}Your name{% else %}Jina lako{% endif %}" autocomplete="name" />
+      <input type="text" id="commentName" class="comment-input" maxlength="120" placeholder="{% if lang=='en' %}Your name{% else %}Jina lako{% endif %}" />
       <textarea id="commentBody" class="comment-textarea" maxlength="4000" placeholder="{% if lang=='en' %}Write your comment…{% else %}Andika maoni yako…{% endif %}"></textarea>
-      <button type="button" class="comment-submit" id="commentSubmit">{% if lang=='en' %}Post comment{% else %}Tuma maoni{% endif %}</button>
+      <button type="button" class="comment-submit" id="commentSubmit">{% if lang=='en' %}Post Comment{% else %}Tuma Maoni{% endif %}</button>
     </div>
     <p class="comment-msg" id="commentMsg" style="display:none;"></p>
   </section>
-
-  <!-- Share -->
-  <div class="post-share">
-    <span class="post-share-label">{% if lang=='en' %}Share{% else %}Shiriki{% endif %}</span>
-    <button class="share-btn" onclick="sharePost('twitter', '{{ request.url }}', '{{ post.title_en }}')">
-      <i class="fab fa-x-twitter"></i> Twitter
-    </button>
-    <button class="share-btn" onclick="sharePost('linkedin', '{{ request.url }}', '{{ post.title_en }}')">
-      <i class="fab fa-linkedin-in"></i> LinkedIn
-    </button>
-    <button class="share-btn" onclick="sharePost('facebook', '{{ request.url }}', '{{ post.title_en }}')">
-      <i class="fab fa-facebook-f"></i> Facebook
-    </button>
-    <button class="share-btn copy-link-btn" data-copy-done="{% if lang=='en' %}Copied!{% else %}Imenakiliwa!{% endif %}" data-copy-label="{% if lang=='en' %}Copy link{% else %}Nakili kiungo{% endif %}" onclick="sharePost('copy', '{{ request.url }}', '{{ post.title_en }}')">
-      🔗 {% if lang=='en' %}Copy link{% else %}Nakili kiungo{% endif %}
-    </button>
-  </div>
-
-  <!-- Newsletter nudge -->
-  <div style="
-    margin-top: 4rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-accent);
-    border-radius: 16px;
-    padding: 2.5rem;
-    display: flex; align-items: center; gap: 2rem;
-    flex-wrap: wrap;
-  ">
-    <div style="flex: 1; min-width: 200px;">
-      <p style="font-family:var(--font-display); font-size:1.3rem; font-weight:700; margin-bottom:0.5rem;">
-        {% if lang=='en' %}Enjoyed this read?{% else %}Umeipenda hii?{% endif %}
-      </p>
-      <p style="color:var(--text-2); font-size:0.9rem;">
-        {% if lang=='en' %}Get new essays delivered straight to your inbox.{% else %}Pata makala mpya moja kwa moja kwenye barua pepe yako.{% endif %}
-      </p>
-    </div>
-    <button type="button" class="btn-primary" data-open-newsletter>
-      {% if lang=='en' %}Subscribe{% else %}Jiunge{% endif %}
-    </button>
-  </div>
 </div>
 
 <!-- Related posts -->
 {% if related %}
 <section class="related-section">
   <div class="related-inner">
-    <h2 class="related-title">
-      {% if lang=='en' %}Continue reading{% else %}Endelea kusoma{% endif %}
+    <h2 class="related-title reveal">
+      {% if lang=='en' %}Continue Reading{% else %}Endelea Kusoma{% endif %}
     </h2>
-    <div class="related-grid">
+    <div class="posts-grid">
       {% for p in related %}
       <article class="post-card reveal">
         {% if p.cover_image %}
         <div class="card-cover">
-          <img src="{{ p.cover_image|asset }}" alt="" loading="lazy" />
+          <img src="{{ p.cover_image|asset }}" alt="" width="400" height="300" loading="lazy" />
         </div>
-        {% else %}
-        <div class="card-cover-placeholder">✍</div>
         {% endif %}
         <div class="card-body">
           {% if p.tag_list() %}
@@ -230,8 +198,9 @@
           </h3>
           <div class="card-footer">
             <span class="card-date">{{ p.created_at.strftime('%b %d, %Y') }}</span>
-            <span class="card-reading">{{ p.reading_time(lang) }} min</span>
-            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow">→</a>
+            <a href="{{ url_for('post', slug=p.slug) }}" class="card-arrow" aria-label="Read more">
+              <i class="fa fa-arrow-right"></i>
+            </a>
           </div>
         </div>
       </article>

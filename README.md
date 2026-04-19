@@ -1,4 +1,4 @@
-# ⚖ Counsel & Craft — Personal Site & Blog
+# ⚖ African Civic Dialog — Personal Site & Blog
 
 A dynamic, bilingual (English / French) personal website built with Flask for a law student, writer, and youth advocate. Features a full blog with rich markdown editor, newsletter via Brevo, reCAPTCHA protection, dark/light theme toggle, and Railway-ready deployment.
 

@@ -1,3 +1,7 @@
+/**
+ * COUNSEL & CRAFT — Main Interactions
+ */
+
 /* ── Theme Management ── */
 (function() {
   const saved = localStorage.getItem('theme') || 'dark';
@@ -5,324 +9,301 @@
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
+  const body = document.body;
+  const html = document.documentElement;
 
-  /* Theme toggle */
+  /* ── Theme Toggle ── */
   const themeBtn = document.getElementById('themeToggle');
   if (themeBtn) {
     themeBtn.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme');
+      const current = html.getAttribute('data-theme');
       const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
+      html.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
     });
   }
 
-  /* Cursor glow */
+  /* ── Cursor Glow ── */
   const glow = document.getElementById('cursorGlow');
   if (glow && window.innerWidth > 768) {
     document.addEventListener('mousemove', e => {
-      glow.style.left = e.clientX + 'px';
-      glow.style.top = e.clientY + 'px';
-      glow.style.opacity = '1';
-    });
+      requestAnimationFrame(() => {
+        glow.style.left = e.clientX + 'px';
+        glow.style.top = e.clientY + 'px';
+        glow.style.opacity = '1';
+      });
+    }, { passive: true });
     document.addEventListener('mouseleave', () => { glow.style.opacity = '0'; });
   }
 
-  /* Hamburger */
-  const ham = document.getElementById('hamburger');
-  const mobileMenu = document.getElementById('mobileMenu');
-  if (ham && mobileMenu) {
-    ham.addEventListener('click', () => {
-      ham.classList.toggle('open');
-      mobileMenu.classList.toggle('open');
-    });
-  }
-
-  /* Nav scroll effect */
+  /* ── Navigation Scroll Effect ── */
   const nav = document.getElementById('siteNav');
   if (nav) {
     window.addEventListener('scroll', () => {
-      nav.style.borderBottomColor = window.scrollY > 20
-        ? 'var(--border-accent)' : 'var(--border)';
+      if (window.scrollY > 50) {
+        nav.classList.add('scrolled');
+      } else {
+        nav.classList.remove('scrolled');
+      }
     }, { passive: true });
   }
 
-  /* Reading progress bar */
-  const progressBar = document.querySelector('.reading-progress-bar');
-  if (progressBar) {
-    window.addEventListener('scroll', () => {
-      const el = document.documentElement;
-      const scrollTop = el.scrollTop || document.body.scrollTop;
-      const height = el.scrollHeight - el.clientHeight;
-      progressBar.style.width = (height > 0 ? (scrollTop / height) * 100 : 0) + '%';
+  /* ── Mobile Menu ── */
+  const ham = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (ham && mobileMenu) {
+    const setMenuState = (isOpen) => {
+      ham.classList.toggle('open', isOpen);
+      mobileMenu.classList.toggle('open', isOpen);
+      body.classList.toggle('no-scroll', isOpen);
+      ham.setAttribute('aria-expanded', String(isOpen));
+      mobileMenu.setAttribute('aria-hidden', String(!isOpen));
+    };
+
+    ham.addEventListener('click', () => {
+      const isOpen = !mobileMenu.classList.contains('open');
+      setMenuState(isOpen);
+    });
+
+    // Close mobile menu when a link is selected
+    mobileMenu.addEventListener('click', (e) => {
+      if (e.target.closest('a')) {
+        setMenuState(false);
+      }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('open')) {
+        setMenuState(false);
+      }
+    });
+
+    // Ensure menu closes when switching to desktop width
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 1024 && mobileMenu.classList.contains('open')) {
+        setMenuState(false);
+      }
     }, { passive: true });
   }
 
-  /* Scroll reveal */
+  /* ── Scroll Reveal ── */
   const reveals = document.querySelectorAll('.reveal');
   if (reveals.length) {
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+    const observerOptions = {
+      threshold: 0.15,
+      rootMargin: '0px 0px -50px 0px'
+    };
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
       });
-    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-    reveals.forEach(el => io.observe(el));
+    }, observerOptions);
+    reveals.forEach(el => revealObserver.observe(el));
   }
 
-  /* Newsletter modal */
-  const modal = document.getElementById('newsletterModal');
-  const closeBtn = document.getElementById('modalClose');
-  if (modal) {
-    function closeNewsletterModal() {
-      modal.classList.remove('open');
-      resetNewsletterSubmitButton();
-    }
-    if (closeBtn) {
-      closeBtn.addEventListener('click', closeNewsletterModal);
-    }
-    modal.addEventListener('click', function (e) {
-      if (e.target === modal) closeNewsletterModal();
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && modal.classList.contains('open')) closeNewsletterModal();
-    });
-    // Show modal after 30s for first visit
-    if (!sessionStorage.getItem('newsletterShown')) {
-      setTimeout(function () {
-        modal.classList.add('open');
-        sessionStorage.setItem('newsletterShown', '1');
-        resetNewsletterSubmitButton();
-      }, 30000);
-    }
-  }
+  /* ── Newsletter Logic ── */
+  initNewsletter();
 
-  document.addEventListener('click', function (e) {
-    const opener = e.target.closest('[data-open-newsletter]');
-    if (!opener) return;
-    e.preventDefault();
-    const m = document.getElementById('newsletterModal');
-    if (m) {
-      m.classList.add('open');
-      resetNewsletterSubmitButton();
-    }
+  /* ── Flash Messages ── */
+  const flashes = document.querySelectorAll('.flash');
+  flashes.forEach(el => {
+    setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-10px)';
+      el.style.transition = 'all 0.5s ease';
+      setTimeout(() => el.remove(), 500);
+    }, 5000);
   });
-
-  initNewsletterSubscribe();
-
-  /* Flash message auto-dismiss */
-  document.querySelectorAll('.flash').forEach(el => {
-    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.5s'; }, 4000);
-    setTimeout(() => el.remove(), 4500);
-  });
-
 });
 
-function initNewsletterSubscribe() {
-  var form = document.getElementById('newsletterSubscribeForm');
-  if (!form) return;
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    submitNewsletterForm(form);
-  });
-}
+/**
+ * Newsletter Subscription Module
+ */
+function initNewsletter() {
+  const modal = document.getElementById('newsletterModal');
+  const closeBtn = document.getElementById('modalClose');
+  const form = document.getElementById('newsletterSubscribeForm');
+  const resultDiv = document.getElementById('subResult');
+  const subBtn = document.getElementById('subBtn');
 
-/** Re-enable the subscribe control (e.g. after closing the modal mid-request, or each time it opens). */
-function resetNewsletterSubmitButton() {
-  var btn = document.querySelector('#newsletterSubscribeForm #subBtn');
-  if (!btn) return;
-  btn.disabled = false;
-  var lab = (btn.dataset.label || '').trim();
-  if (lab) btn.textContent = lab;
-}
+  if (!modal) return;
 
-function nlSleep(ms) {
-  return new Promise(function (r) { setTimeout(r, ms); });
-}
+  let autoShowTimer = null;
 
-function nlWaitForGrecaptcha(timeoutMs) {
-  var siteKey = (document.body.dataset.recaptchaKey || '').trim();
-  if (!siteKey) return Promise.resolve(true);
-  var deadline = Date.now() + (timeoutMs || 40000);
-  return new Promise(function (resolve) {
-    (function poll() {
-      if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.ready === 'function') {
-        resolve(true);
-        return;
-      }
-      if (Date.now() > deadline) {
-        resolve(false);
-        return;
-      }
-      setTimeout(poll, 120);
-    })();
-  });
-}
+  function openModal() {
+    // Clear auto-show timer if user opens manually
+    if (autoShowTimer) {
+      clearTimeout(autoShowTimer);
+      autoShowTimer = null;
+    }
+    
+    modal.classList.add('open');
+    document.body.classList.add('no-scroll');
+    sessionStorage.setItem('nl_shown', '1');
 
-async function nlRecaptchaToken(siteKey, maxAttempts) {
-  var n = maxAttempts || 4;
-  for (var i = 0; i < n; i++) {
-    try {
-      var t = await new Promise(function (resolve, reject) {
-        grecaptcha.ready(function () {
-          grecaptcha.execute(siteKey, { action: 'subscribe' }).then(resolve).catch(reject);
-        });
-      });
-      if (t && String(t).trim()) return String(t).trim();
-    } catch (err) { /* retry */ }
-    if (i < n - 1) await nlSleep(400 + i * 450);
+    if (resultDiv) {
+      resultDiv.style.display = 'none';
+      resultDiv.className = 'sub-result';
+    }
   }
-  return '';
-}
 
-function nlFetchSubscribe(actionUrl, bodyString, csrf, timeoutMs) {
-  var url = actionUrl || '/subscribe';
-  var ms = timeoutMs || 40000;
-  var headers = {
-    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-    Accept: 'application/json',
-    'X-CSRFToken': csrf,
-    'X-Requested-With': 'XMLHttpRequest',
-  };
-  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
-    return fetch(url, {
-      method: 'POST',
-      headers: headers,
-      credentials: 'same-origin',
-      body: bodyString,
-      signal: AbortSignal.timeout(ms),
+  function closeModal() {
+    modal.classList.remove('open');
+    document.body.classList.remove('no-scroll');
+  }
+
+  // Event Listeners for Opening
+  document.addEventListener('click', e => {
+    // We use a broader check to ensure all data-open-newsletter targets work
+    const target = e.target.closest('[data-open-newsletter]');
+    if (target) {
+      e.preventDefault();
+      openModal();
+    }
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeModal();
+  });
+
+  // Close on backdrop click
+  modal.addEventListener('click', e => { 
+    if (e.target === modal) closeModal(); 
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', e => { 
+    if (e.key === 'Escape' && modal.classList.contains('open')) {
+      closeModal();
+    }
+  });
+
+  // Auto-show after 40s (only if not already shown)
+  if (!sessionStorage.getItem('nl_shown')) {
+    autoShowTimer = setTimeout(() => {
+      if (!modal.classList.contains('open')) {
+        openModal();
+      }
+    }, 40000);
+  }
+
+  // Form Submission
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleSubscription(form, subBtn, resultDiv);
     });
   }
-  var ctrl = new AbortController();
-  var id = setTimeout(function () { ctrl.abort(); }, ms);
-  return fetch(url, {
-    method: 'POST',
-    headers: headers,
-    credentials: 'same-origin',
-    body: bodyString,
-    signal: ctrl.signal,
-  }).finally(function () { clearTimeout(id); });
+}
+
+async function handleSubscription(form, btn, result) {
+  const emailInput = form.querySelector('input[type="email"]');
+  const nameInput = form.querySelector('input[name="name"]');
+  const csrfInput = form.querySelector('input[name="csrf_token"]');
+  const tokInput = document.getElementById('subRecaptchaToken');
+  
+  const siteKey = (document.body.dataset.recaptchaKey || '').trim();
+  const labelOrig = btn.textContent;
+  const labelBusy = btn.dataset.busy || '…';
+
+  if (!emailInput.value) return;
+
+  // UI Stalling
+  btn.disabled = true;
+  btn.textContent = labelBusy;
+  if (result) result.style.display = 'none';
+
+  try {
+    let token = '';
+    
+    // reCAPTCHA Handling
+    if (siteKey && typeof grecaptcha !== 'undefined') {
+      try {
+        token = await new Promise((resolve, reject) => {
+          grecaptcha.ready(() => {
+            grecaptcha.execute(siteKey, { action: 'subscribe' })
+              .then(resolve)
+              .catch(reject);
+          });
+        });
+      } catch (err) {
+        console.warn('reCAPTCHA failed:', err);
+        // We continue anyway, backend will decide if it is mandatory
+      }
+    }
+
+    if (tokInput) tokInput.value = token;
+
+    // Build Request
+    const formData = new FormData(form);
+    const response = await fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrfInput.value
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    
+    if (data.ok) {
+      showSubscriptionResult(result, data.msg || 'Success!', true);
+      form.reset();
+      // Optional: Close modal after success
+      setTimeout(() => {
+        const modal = document.getElementById('newsletterModal');
+        if (modal && modal.classList.contains('open')) {
+          modal.classList.remove('open');
+        }
+      }, 3000);
+    } else {
+      showSubscriptionResult(result, data.msg || 'Error occurred.', false);
+    }
+  } catch (err) {
+    console.error('Subscription error:', err);
+    showSubscriptionResult(result, 'Connection error. Please try again.', false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = labelOrig;
+  }
+}
+
+function showSubscriptionResult(el, msg, isOk) {
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.className = `sub-result ${isOk ? 'ok' : 'err'}`;
 }
 
 /**
- * Newsletter: always intercept submit — use CSRF + fields from the live form (not the head meta tag).
+ * Social Sharing
  */
-async function submitNewsletterForm(form) {
-  var emailInput = form.querySelector('[name="email"]');
-  var nameInput = form.querySelector('[name="name"]');
-  var tokInput = form.querySelector('[name="recaptcha_token"]');
-  var csrfInput = form.querySelector('[name="csrf_token"]');
-  var btn = form.querySelector('#subBtn');
-  var result = document.getElementById('subResult');
-  if (!emailInput || !btn || !csrfInput) return;
-
-  var email = (emailInput.value || '').trim();
-  var name = nameInput ? (nameInput.value || '').trim() : '';
-  var csrf = (csrfInput.value || '').trim();
-  var labelBusy = (btn.dataset.busy || '…').trim();
-  var labelDefault = (btn.dataset.label || btn.textContent || 'Subscribe').trim() || 'Subscribe';
-  var siteKey = (document.body.dataset.recaptchaKey || '').trim();
-
-  if (!email) {
-    showResult(result, 'Please enter your email.', false);
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = labelBusy;
-
-  try {
-    var token = '';
-    if (siteKey) {
-      var loaded = await nlWaitForGrecaptcha(40000);
-      if (!loaded) {
-        showResult(
-          result,
-          'Security script did not load in time. Check your connection, or allow google.com / gstatic.com (Firefox: disable Strict tracking for this site if needed).',
-          false
-        );
-        return;
-      }
-      token = await nlRecaptchaToken(siteKey, 4);
-      if (!token) {
-        showResult(
-          result,
-          'Could not complete the security check. Refresh the page, try again, or allow Google scripts for this site.',
-          false
-        );
-        return;
-      }
-    }
-    if (tokInput) tokInput.value = token;
-
-    var body = new URLSearchParams();
-    body.set('csrf_token', csrf);
-    body.set('email', email);
-    body.set('name', name);
-    body.set('recaptcha_token', token);
-
-    var res = await nlFetchSubscribe(form.action, body.toString(), csrf, 40000);
-    var data = {};
-    try {
-      data = await res.json();
-    } catch (parseErr) {
-      showResult(
-        result,
-        res.status >= 500
-          ? 'The server had a problem. Wait a moment and try again.'
-          : 'Something went wrong. Please try again.',
-        false
-      );
-      return;
-    }
-    var ok = !!data.ok;
-    showResult(result, data.msg || (ok ? 'Thank you!' : 'Something went wrong.'), ok);
-    if (ok) {
-      emailInput.value = '';
-      if (nameInput) nameInput.value = '';
-      if (tokInput) tokInput.value = '';
-    }
-  } catch (e) {
-    var aborted = e && (e.name === 'AbortError' || e.name === 'TimeoutError');
-    showResult(
-      result,
-      aborted ? 'Request timed out. Check your connection and try again.' : 'Something went wrong. Please try again.',
-      false
-    );
-  } finally {
-    btn.disabled = false;
-    btn.textContent = labelDefault;
-  }
-}
-
-function showResult(el, msg, ok) {
-  if (!el) return;
-  el.textContent = msg;
-  el.className = 'sub-result ' + (ok ? 'ok' : 'err');
-  el.style.display = 'block';
-}
-
-/* Share buttons */
 function sharePost(platform, url, title) {
-  const encodedUrl = encodeURIComponent(url);
-  const encodedTitle = encodeURIComponent(title);
-  const links = {
-    twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-    copy: null
+  const meta = {
+    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
   };
+
   if (platform === 'copy') {
     navigator.clipboard.writeText(url).then(() => {
       const btn = document.querySelector('.copy-link-btn');
       if (btn) {
-        const done = btn.dataset.copyDone || '✓ Copied!';
-        const label = btn.dataset.copyLabel || 'Copy link';
-        const orig = '🔗 ' + label;
-        btn.textContent = done;
-        setTimeout(() => { btn.textContent = orig; }, 2200);
+        const orig = btn.innerHTML;
+        btn.innerHTML = btn.dataset.copyDone || '✓ Copied';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
       }
     });
     return;
   }
-  window.open(links[platform], '_blank', 'width=600,height=400');
+
+  if (meta[platform]) {
+    window.open(meta[platform], '_blank', 'width=600,height=450');
+  }
 }

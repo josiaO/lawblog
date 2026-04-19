@@ -1339,11 +1339,11 @@ def get_lang():
 
 def get_settings():
     return {
-        'name': SiteSettings.get('name', 'Counsel & Craft'),
-        'tagline_en': SiteSettings.get('tagline_en', 'Research · Advocacy · Public legal education'),
-        'tagline_fr': SiteSettings.get('tagline_fr', 'Utafiti · Ulinzi · Elimu ya sheria kwa umma'),
-        'bio_en': SiteSettings.get('bio_en', 'An independent initiative publishing clear analysis on law, rights, and accountable institutions.'),
-        'bio_fr': SiteSettings.get('bio_fr', 'Mpango huru unaochapisha uchambuzi mwazi kuhusu sheria, haki, na taasisi zinazowajibika.'),
+        'name': SiteSettings.get('name', 'African Civic Dialog'),
+        'tagline_en': SiteSettings.get('tagline_en', 'Law · Writing · Youth'),
+        'tagline_fr': SiteSettings.get('tagline_fr', 'Sheria · Uandishi · Vijana'),
+        'bio_en': SiteSettings.get('bio_en', 'A law student, writer, and voice for the youth.'),
+        'bio_fr': SiteSettings.get('bio_fr', 'Mwanafunzi wa sheria, mwandishi, na sauti ya vijana.'),
         'email': SiteSettings.get('email', ''),
         'twitter': SiteSettings.get('twitter', ''),
         'linkedin': SiteSettings.get('linkedin', ''),
